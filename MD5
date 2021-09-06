@@ -1,6 +1,7 @@
-66ea3a3d5a633eb4bc6329c89d9c1553 *DESCRIPTION
+295d0c59ac9378a12837ac38afca43df *DESCRIPTION
 4440d6c402de589cd213aa77ca1a4bda *NAMESPACE
-6c0b4d3d44a4d1c110f6b364a43d4045 *NEWS.md
+e25e244b93bc3792287e3a6545800736 *NEWS.md
+1aafc852fb47c20b342623ca4faca19f *R/CapWords.R
 fc19a6479f34f473561a2fedc370d0cf *R/ColorspacePrivates.R
 1dc6c3b2723e0efba28a8eb221c099b9 *R/absolute_map.R
 ba9f31c48623ae0368472aa8a2f34de4 *R/absolute_map_builder.R
@@ -59,7 +60,7 @@ b628be31aa528db5669006fd06307b24 *R/plot_fieldmean.R
 cf21dd6133eec25071cd9a426c0605d0 *R/plot_time_series.R
 51c1e7eb8a39d3280214ce7d8da9b052 *R/plot_trend.R
 13cecc3199be74b76f60431e8e0bbe17 *R/plot_warming_stripes.R
-0f3f3800e1e2f6bc83d53713f8fc8bc1 *R/quicklook.R
+23b8e71b0e417a8b0c61924bf6071fb7 *R/quicklook.R
 1d4abfb9edeae24cd158ded01dff81a1 *R/ranking.R
 497fdbfaa2df2d2845d8398f805a0b45 *R/recalculateImageDimensions.R
 5230e8f9bcfe81e71e4ba04566d4f236 *R/release_questions.R
@@ -80,7 +81,7 @@ a1fef58e2e793e99011840fd0a5ce63c *R/sysdata.rda
 842a9c41e64fed6e0be32c1397f0e969 *R/time_series_plot.R
 d3df86603693ea3be0875e5da1b1cc0e *R/trend_plot.R
 e52d1190e5856c27bc6a4b7f042c393d *R/warming_stripes_plot.R
-3dce8b22ee99bceec6e5ed513b9d1f66 *build/partial.rdb
+e9115fc8db165a922272b6ece090704e *build/partial.rdb
 09822e7359c1b70d5ffbe5e02a2c7290 *inst/WORDLIST
 ecd5d32528f54448439f86274dc992be *inst/extdata/CMSAF_NoName_Black.png
 c607a52c29a6c0d919399ce99e9feeac *inst/extdata/CMSAF_NoName_Colour_crop.png
@@ -101,7 +102,7 @@ cb34100cd8b8c6b022e8f08cedc541fe *man/cmsafvis.Rd
 9df369495a65c24cfc4b45ca3f8a1f3f *man/fieldmean_plot.Rd
 22e7df80c1fef34668e72af8fcf3c910 *man/helper_time_series_compare.Rd
 d8d1598bf7c87261b26ffadf55660ff2 *man/monitor_climate.Rd
-86e7cf751783c1fced130b6c6ce747a6 *man/quicklook.Rd
+00c25db8daef95f25d00b14c4a62e8db *man/quicklook.Rd
 231bfb8672be7ba3f51a9881dc9c7660 *man/recalculateImageDimensions.Rd
 f9a4209485ced7c54596395707829222 *man/render_hist_plot.Rd
 a136ce328f5fa52b260f0832f1cd77cf *man/render_instat_plot.Rd

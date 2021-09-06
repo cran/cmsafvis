@@ -8,9 +8,9 @@ quicklook(
   config,
   filelist,
   outpath = getwd(),
-  jpeg_quality = 75,
-  dpi = 72,
-  iwidth = 720,
+  jpeg_quality = 100,
+  dpi = 150,
+  iwidth = 800,
   logo = TRUE,
   copyright = TRUE,
   bluemarble = FALSE
