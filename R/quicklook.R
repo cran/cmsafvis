@@ -1,7 +1,7 @@
 #'Create a quicklook of NetCDF data
 #'
 #'The function creates a plot of the variables in NetCDF file(s) specified in the config file.
-#'Only NetCDF files that conform to the [CMSAF naming convention](https://www.cmsaf.eu/EN/Products/NamingConvention/Naming_Convention_node.html) are supported.
+#'Only NetCDF files that conform to the [CM SAF naming convention](https://www.cmsaf.eu/EN/Products/NamingConvention/Naming_Convention_node.html) are supported.
 #'
 #'@param filelist list of NetCDF file to create plots from (character).
 #'@param config filename of configuration file. This may include the directory
@@ -16,6 +16,7 @@
 #'@param bluemarble logical; should the data be plotted onto a NASA bluemarble (only available for MSG/Seviri based data)?
 #'   Due to data size this option is not available for the cmsafvis package on CRAN. Please have a look at
 #'   our website https://www.cmsaf.eu/R_toolbox
+#'@param verbose logical; if TRUE, progress messages are shown
 #'
 #'@return A jpeg file with the same name as the original NetCDF file.
 #'@export
@@ -26,15 +27,21 @@ quicklook <- function(config,
                       outpath = getwd(),
                       jpeg_quality = 100,
                       dpi = 150,
-                      iwidth = 800,
+                      iwidth = 1242,
                       logo = TRUE,
                       copyright = TRUE,
-                      bluemarble = FALSE) {
+                      bluemarble = FALSE,
+                      verbose = TRUE) {
   # Make sure that any user settings are reset when the function exits
   # This is a requirement by CRAN
   oldpar <- graphics::par(no.readonly = TRUE)
   # Warning: In graphics::par(oldpar) : par(new) ohne Plot aufgerufen
   on.exit(suppressWarnings(graphics::par(oldpar)))
+  
+  # temporarly switch warnings off due to unwanted crs warnings
+  oldw <- getOption("warn")
+  options(warn = -1)
+  on.exit(options(warn = oldw))
   
   ### check parameters ###
   assert_that(is.string(config))
@@ -97,6 +104,7 @@ quicklook <- function(config,
     )
     
     # Size and location of the logo
+    xwidth <- iwidth
     logo.scale_black <- 0.3
     
     logo.x <- 0
@@ -142,13 +150,41 @@ quicklook <- function(config,
     
     text.x <- 0.99
     text.y <- 0.01
+    
+    lsb <- logo.scale_black
+    lsc <- logo.scale_color
   }
   
+  ind360 <- FALSE # indicator for longitude 0 to 360
+ 
   ### Read config file ###
-  
   configParams <- yaml::read_yaml(config)
-  ref_file <- filelist[1]
+  
+  # loop over files in filelist
+  for (ifile in 1:length(filelist)) {
+  
+  suppressWarnings(reset_par()) # just to be sure
+  invisible(grDevices::dev.off())
+    
+  plotfile <- filelist[ifile]   
+  ref_file <- plotfile[1]
   file_info <- get_file_info(ref_file)
+  iwidth <- xwidth 
+  
+  # check config entry
+  if (sum(grepl(file_info$id, configParams)) == 1) {
+    if (verbose) {
+      cat("Config entry found for: ", basename(ref_file), sep = "")
+      cat ("\n")
+    }
+  } else {
+    if (verbose) {
+      cat("!!! Warning !!! Config entry missing for: ", 
+          basename(ref_file)," ", file_info$id, sep = "")
+      cat ("\n")
+    }
+    next
+  }
   
   varnames <- c()
   units <- c()
@@ -208,23 +244,41 @@ quicklook <- function(config,
     units <- c(units, ncdf4::ncatt_get(nc, vars[k], "units")$value)
   }
   
-  if ("lon" %in% names(nc$dim)) {
-    lon_min <- min(ncdf4::ncvar_get(nc, "lon"), na.rm = TRUE)
-    lon_max <- max(ncdf4::ncvar_get(nc, "lon"), na.rm = TRUE)
-    lat_min <- min(ncdf4::ncvar_get(nc, "lat"), na.rm = TRUE)
-    lat_max <- max(ncdf4::ncvar_get(nc, "lat"), na.rm = TRUE)
+  # check lon lat names (not elegant, but should work for now)
+  lonvar <- "lon"
+  latvar <- "lat"
+  if ("lon" %in% names(nc$dim)) lonvar <- "lon" 
+  if ("longitude" %in% names(nc$dim)) lonvar <- "longitude"
+  if ("Longitude" %in% names(nc$dim)) lonvar <- "Longitude"
+  if ("lat" %in% names(nc$dim)) latvar <- "lat"
+  if ("latitude" %in% names(nc$dim)) latvar <- "latitude"
+  if ("Latitude" %in% names(nc$dim)) latvar <- "Latitude"
+  
+  if (lonvar %in% names(nc$dim)) {
+    lon_min <- min(ncdf4::ncvar_get(nc, lonvar), na.rm = TRUE)
+    lon_max <- max(ncdf4::ncvar_get(nc, lonvar), na.rm = TRUE)
+    lat_min <- min(ncdf4::ncvar_get(nc, latvar), na.rm = TRUE)
+    lat_max <- max(ncdf4::ncvar_get(nc, latvar), na.rm = TRUE)
   } else if (ncdf4::ncatt_get(nc, 0, "geospatial_lon_max")$hasatt) {
     lon_min <- ncdf4::ncatt_get(nc, 0, "geospatial_lon_min")$value
     lon_max <- ncdf4::ncatt_get(nc, 0, "geospatial_lon_max")$value
     lat_min <- ncdf4::ncatt_get(nc, 0, "geospatial_lat_min")$value
     lat_max <- ncdf4::ncatt_get(nc, 0, "geospatial_lat_max")$value
   } else {
-    stop("unable to get a lon/lat reference")
+    stop("unable to get a lon / lat reference")
+  }
+  
+  if (lon_max > 350) {
+    ind360      <- TRUE  
+    lon_max_org <- lon_max
+    lon_min_org <- lon_min
+    lon_max     <- 180 - lon_min_org
+    lon_min     <- 180 - lon_max_org
   }
   
   if (area == "NP" | area == "SP") {
-    lond <- ncdf4::ncvar_get(nc, "lon")
-    latd <- ncdf4::ncvar_get(nc, "lat")
+    lond <- ncdf4::ncvar_get(nc, lonvar)
+    latd <- ncdf4::ncvar_get(nc, latvar)
   }
   
   # get time info for all slots
@@ -245,23 +299,46 @@ quicklook <- function(config,
   if (area == "NP" | area == "SP") {
     iheight <- round(iwidth*0.94)
     } else if (area == "GL") {
-      iheight <- round((iwidth/aspect)*0.98)
+      iheight <- round((iwidth/aspect)*1.04)
       } else {
           iheight <- round((iwidth/aspect)*0.95)
   }
   
   if (logo) {
-    AR_color <- dims_color[1] / dims_color[2] * iwidth / iheight
-    AR_black <- dims_black[1] / dims_black[2] * iwidth / iheight
+    if (area == "NP" | area == "SP") {
+      AR_color <- dims_color[1] / dims_color[2] * iwidth / iheight
+      AR_black <- dims_black[1] / dims_black[2] * iwidth / iheight
+    } else {
+      AR_color <- dims_color[1] / dims_color[2] * lon_range / lat_range
+      AR_black <- dims_black[1] / dims_black[2] * lon_range / lat_range
+    }
   }
   
-  if (is_multiplot) {
-    iheight <- iheight*1.5
-    iwidth  <- iwidth*1.5
+  if (logo) {
+    if (area == "GL") {
+      logo.scale_black <- 0.18
+      logo.height_black <- logo.scale_black * iwidth * dims_black[1] / dims_black[2]
+      
+      if (logo.scale_black * iwidth * dims_black[1] / dims_black[2] < 30) {
+        logo.height_black <- 30
+        logo.scale_black <- logo.height_black / dims_black[1] * dims_black[2] / iwidth
+      }
+      
+      logo.scale_color <- 0.18
+      logo.height_color <- logo.scale_color * iwidth * dims_color[1] / dims_color[2]
+      
+      if (logo.scale_color * iwidth * dims_color[1] / dims_color[2] < 30) {
+        logo.height_color <- 30
+        logo.scale_color <- logo.height_color / dims_color[1] * dims_color[2] / iwidth
+      }
+    } else {
+      logo.scale_black <- lsb
+      logo.scale_color <- lsc
+    } 
   }
-  
+
   # factor for font size
-  fsf <- iwidth / 800
+  fsf <- iwidth / 1021
   
   # Prepare polar projection
   
@@ -284,11 +361,10 @@ quicklook <- function(config,
   
   ### Plot ###
   
-  for (i in 1:length(filelist)) {
     # read data
     stacks <- c()
     for (k in seq_along(vars)) {
-      stacks <- c(stacks, raster::stack(filelist[i], quick = TRUE, varname = vars[k]))
+      stacks <- c(stacks, raster::stack(plotfile[1], quick = TRUE, varname = vars[k]))
     }
     if (!is.null(nc_crs)) {
       for (l in seq_along(stacks)) {
@@ -301,15 +377,15 @@ quicklook <- function(config,
     
     
     # filename and timestamp for title
-    filename <- unlist(strsplit(basename(filelist[i]), "\\."))
+    filename <- unlist(strsplit(basename(plotfile[1]), "\\."))
     outfile <- file.path(outpath, paste0(filename[1], ".jpg"))
     fi <- get_file_info(filename[1])
-    if (is.null(slots[i])) {
+    if (is.null(slots[1])) {
       file_time <- fi$date_time
-      slot_i <- i
+      slot_i <- 1
     } else {
-      file_time <- date.time[i]
-      slot_i <- slots[i]
+      file_time <- date.time[1]
+      slot_i <- slots[1]
     }
     
     if (file_info$time_interval == "instantaneous")
@@ -341,23 +417,26 @@ quicklook <- function(config,
       nrows <- ceiling(nvars/ncols)
       graphics::par(mfrow = c(nrows, ncols))
       graphics::par(mar = c(2, 4, 4, 6) + 0.1)
-      graphics::par(oma = c(0, 0, 1, 5))
+      graphics::par(oma = c(0, 0, 2, 5))
+    }  else if (area == "GL") {
+        graphics::par(mar = c(2, 0, 4, 5) + 0.1)
+        graphics::par(oma = c(0, 0, 1, 1))
     } else {
-      graphics::par(mar = c(2, 4, 4, 6) + 0.1)
-      graphics::par(oma = c(0, 0, 1, 1))
+        graphics::par(mar = c(2, 4, 4, 7) + 0.1)
+        graphics::par(oma = c(0, 0, 1, 2))
     }
-    
+
     for (j in seq_along(vars)) {
       
       # Set color palette
       if (col_from_config[[1]] == "clouds") {
-        stacks[[j]][[i]][is.na(stacks[[j]][[i]])] <- 0
-        if (raster::maxValue(stacks[[j]][[i]]) == 3) {
+        stacks[[j]][[1]][is.na(stacks[[j]][[1]])] <- 0
+        if (raster::maxValue(stacks[[j]][[1]]) == 3) {
           col <- cloud_mask1
         } else {
           col <- cloud_mask2
         }
-        plot_lim[j,] <- range(raster::values(stacks[[j]][[i]]),na.rm = TRUE)
+        plot_lim[j,] <- range(raster::values(stacks[[j]][[1]]),na.rm = TRUE)
       } else {
         col <- getColors(col_from_config[[j]], palettes, 32, FALSE)
       }
@@ -374,7 +453,7 @@ quicklook <- function(config,
        
         rotate_cc <- function(x) {apply(t(x), 2, rev)}
         
-        datav <- raster::as.matrix(stacks[[j]][[i]])
+        datav <- raster::as.matrix(stacks[[j]][[1]])
         # for some reason the data are mirrored; this has to be corrected
         datav <- rotate_cc(datav)
         if (area == "NP") {
@@ -448,6 +527,7 @@ quicklook <- function(config,
           datav,
           xlim = c(-0.7, 0.7),
           ylim = c(-0.7, 0.7),
+          zlim = plot_lim[j,],
           nx = nx / xf,
           ny = ny / yf,
           xlab = " ",
@@ -488,6 +568,7 @@ quicklook <- function(config,
           datav,
           xlim = c(-0.7, 0.7),
           ylim = c(-0.7, 0.7),
+          zlim = plot_lim[j,],
           nx = nx / xf,
           ny = ny / yf,
           xlab = " ",
@@ -535,6 +616,7 @@ quicklook <- function(config,
           blue_marble$data_values,
           xlim = c(-1, 1),
           ylim = c(-1, 1),
+          zlim = plot_lim[j,],
           nx = blue_marble$n_lon_unique / blue_marble$xf,
           ny = blue_marble$n_lat_unique / blue_marble$yf,
           xlab = " ",
@@ -568,6 +650,7 @@ quicklook <- function(config,
             blue_marble$data_values,
             xlim = c(-1, 1),
             ylim = c(-1, 1),
+            zlim = plot_lim[j,],
             nx = blue_marble$n_lon_unique / blue_marble$xf,
             ny = blue_marble$n_lat_unique / blue_marble$yf,
             xlab = " ",
@@ -595,19 +678,39 @@ quicklook <- function(config,
         }
         
         # plot image
-        raster::image(stacks[[j]], y = slot_i,
-                      main = "",
-                      xlim = c(lon_min, lon_max),
-                      ylim = c(lat_min, lat_max),
-                      axes = FALSE,
-                      xlab = "",
-                      ylab = "",
-                      zlim = plot_lim[j,],
-                      col = col,
-                      colNA = "cornsilk2",
-                      asp = 1,
-                      add = TRUE
-        )
+        # UTH data with 0 to 360 grid were plotted wrong,
+        # but the solution on Windows did not work on Linux
+        if (ind360) {
+        #  raster::image(raster::rotate(stacks[[j]]),
+            raster::image(stacks[[j]], y = slot_i,
+                        main = "",
+                        xlim = c(lon_min, lon_max),
+                        ylim = c(lat_min, lat_max),
+                        axes = FALSE,
+                        xlab = "",
+                        ylab = "",
+                        zlim = plot_lim[j,],
+                        col = col,
+                        colNA = "cornsilk2",
+                        asp = 1,
+                        add = TRUE
+          )
+        } else {
+            raster::image(stacks[[j]], y = slot_i,
+                          main = "",
+                          xlim = c(lon_min, lon_max),
+                          ylim = c(lat_min, lat_max),
+                          axes = FALSE,
+                          xlab = "",
+                          ylab = "",
+                          zlim = plot_lim[j,],
+                          col = col,
+                          colNA = "cornsilk2",
+                          asp = 1,
+                          add = TRUE
+            )
+        }
+        
         
         # borderline plot
         if (file_info$grid == "Satellite projection MSG/Seviri") {
@@ -616,47 +719,70 @@ quicklook <- function(config,
             maps::map("world", projection = "orthographic", interior = FALSE, orientation = c(0,0,0), add = TRUE)
           )
         } else if (area == "GL") {
-            maps::map("world", interior = FALSE, xlim = c(lon_min, lon_max), 
-                    ylim = c(lat_min, lat_max), wrap = c(lon_min, lon_max), add = TRUE)
+            if (lon_max >= 359) {
+              maps::map("world2", interior = FALSE, xlim = c(lon_min, lon_max), 
+                ylim = c(lat_min, lat_max), wrap = c(-180, 180), add = TRUE)
+            } else {
+                maps::map("world", interior = FALSE, xlim = c(lon_min, lon_max), 
+                  ylim = c(lat_min, lat_max), wrap = c(-180, 180), add = TRUE)
+            }
         } else {
-            maps::map("world", interior = FALSE, xlim = c(lon_min, lon_max), 
-                    ylim = c(lat_min, lat_max), add = TRUE)
+            if (lon_max >= 359) {
+              maps::map("world2", interior = FALSE, xlim = c(lon_min, lon_max), 
+                        ylim = c(lat_min, lat_max), add = TRUE)
+            } else {
+                maps::map("world", interior = FALSE, xlim = c(lon_min, lon_max), 
+                        ylim = c(lat_min, lat_max), add = TRUE)
+            }
         }
        }
       } # end if polar projection 
       
       # plot logo and copyright text
       if (logo || copyright) {
+        # check figure min and max and calculate a correction
+        xmin <- graphics::par("usr")[1]
+        xmax <- graphics::par("usr")[2]
+        ymin <- graphics::par("usr")[3]
+        ymax <- graphics::par("usr")[4]
+        
+        xoff <- (1 / (abs(xmin) + abs(xmax))) * (abs(xmin - lon_min) + 1)
+        yoff <- (1 / (abs(ymin) + abs(ymax))) * (abs(ymin - lat_min) + 1)
+        
+        if (xoff <= 0 || xoff >= 0.5) xoff <- 0
+        if (yoff <= 0 || yoff >= 0.5) yoff <- 0
+        
         graphics::par(usr = c(0, 1, 0, 1))
         
         if (logos[j] == "color") {
           logo_cmsaf <- logo_cmsaf_color
           AR <- AR_color
           logo.scale <- logo.scale_color
-          logo.height <- logo.height_color
+          logo.height <-
+            (dims_color[1]/dims_color[2] *((abs(xmin) + abs(xmax)) * logo.scale)) / (abs(ymin) + abs(ymax))
         } else {
           logo_cmsaf <- logo_cmsaf_black
           AR <- AR_black
           logo.scale <- logo.scale_black
-          logo.height <- logo.height_black
+          logo.height <-
+            (dims_black[1]/dims_black[2] *((abs(xmin) + abs(xmax)) * logo.scale)) / (abs(ymin) + abs(ymax))
         }
       }
       if (logo) {
         graphics::rasterImage(array(0.75, dim = dim(logo_cmsaf)),
-                              logo.x + 0.01,
-                              logo.y + 0.01,
-                              logo.x + logo.scale,
-                              logo.y + (AR * logo.scale),
+                              logo.x + 0.01 + xoff,
+                              logo.y + 0.01 + yoff,
+                              logo.x + logo.scale + 0.01 + xoff,
+                              logo.y + logo.height + 0.01 + yoff,
                               interpolate = TRUE,
                               bg = "white")
         
         graphics::rasterImage(logo_cmsaf,
-                              logo.x + 0.01,
-                              logo.y + 0.01,
-                              logo.x + logo.scale,
-                              logo.y + (AR * logo.scale),
-                              interpolate = TRUE,
-                              asp = 1
+                              logo.x + 0.01 + xoff,
+                              logo.y + 0.01 + yoff,
+                              logo.x + logo.scale + 0.01 + xoff,
+                              logo.y + logo.height + 0.01 + yoff,
+                              interpolate = TRUE
         )
       }
       if (copyright) {
@@ -664,13 +790,13 @@ quicklook <- function(config,
         cr.scale <- (logo.scale - 0.02)/graphics::strwidth(txt)
         dims_text <- c(round(dim(logo_cmsaf)[1]/2), dim(logo_cmsaf)[2], dim(logo_cmsaf)[3])
         graphics::rasterImage(array(0.75, dim = dim(logo_cmsaf)),
-                              text.x - logo.scale,
-                              text.y,
-                              text.x,
-                              text.y + ((AR * logo.scale)/2),
+                              text.x - logo.scale - xoff,
+                              text.y + yoff,
+                              text.x - xoff,
+                              text.y + ((AR * logo.scale)/2) + yoff,
                               interpolate = TRUE)
         
-        graphics::text(text.x, text.y + 0.01, txt,
+        graphics::text(text.x - xoff, text.y + 0.01 + yoff, txt,
                        cex = cr.scale,
                        adj = c(1,0))
       }
@@ -687,7 +813,7 @@ quicklook <- function(config,
                      zlim = plot_lim[j,],
                      legend.only = TRUE,
                      legend.shrink = 0.9,
-                     legend.width = 1,
+                     legend.width = 1.5,
                      legend.mar = 5.1,
                      legend.args=list(text = units[j], 
                                       side = 2, 

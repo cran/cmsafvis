@@ -1,5 +1,13 @@
 # Changelog for cmsafvis package
 
+## 1.1.7
+
+- Adaptations to work with files via URL
+- KML export is temporarily removed due to missing plotKML package 
+
+## 1.1.6
+- Bug fixes in quicklook: wrong logo position, wrong color bar in polar plots
+
 ## 1.1.5
 - Several adaptations in quicklook operator
 - New config parameters for quicklook

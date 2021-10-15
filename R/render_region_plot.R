@@ -10,6 +10,8 @@
 #' @param timestep Timestep to visualize at (character).
 #' @param image_def Default size (positive numeric).
 #' @param ihsf Image height scaling factor (positive numeric).
+#' @param nc Alternatively to \code{infile} you can specify the input as an
+#'  object of class `ncdf4` (as returned from \code{ncdf4::nc_open}).
 #'
 #' @export
 render_region_plot <- function(infile,
@@ -42,7 +44,9 @@ render_region_plot <- function(infile,
                                plot_grid,
                                grid_col,
                                image_def,
-                               ihsf) {
+                               ihsf,
+                               nc = NULL) {
+  if (!is.null(nc)) infile <- nc$filename
   if (is.null(outfile)) {
     outfile <- tempfile(fileext = fileExtension)
   }
@@ -74,17 +78,22 @@ render_region_plot <- function(infile,
     } else if (fileExtension == ".kml") {
       kml_toolbox <- raster::rasterToPolygons(ras)
 
-      check_package_dependency("plotKML", reason = "exporting KML files")
-
-      plotKML::plotKML(
-        kml_toolbox,
-        file = outfile,
-        kmz = FALSE,
-        open.kml = FALSE,
-        plot.labpt = FALSE,
-        overwrite = TRUE,
-        outline = 0
-      )
+      # check_package_dependency("plotKML", reason = "exporting KML files")
+      # 
+      # plotKML::plotKML(
+      #   kml_toolbox,
+      #   file = outfile,
+      #   kmz = FALSE,
+      #   open.kml = FALSE,
+      #   plot.labpt = FALSE,
+      #   overwrite = TRUE,
+      #   outline = 0
+      # )
+      
+      cat("Sorry, but the plotKML R-package was removed from CRAN 
+              and KML output is not possible at the moment.
+              We are working on a solution for the next update.","\n")
+      
     }
     return(list(
       src = outfile,
