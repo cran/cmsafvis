@@ -1,6 +1,6 @@
 Package: cmsafvis
 Title: Tools to Visualize CM SAF NetCDF Data
-Version: 1.1.8
+Version: 1.1.9
 Authors@R: 
     c(person(given = "Steffen",
            family = "Kothe",
@@ -15,7 +15,7 @@ Description: The Satellite Application Facility on Climate Monitoring (CM SAF)
     Meteorological Satellites (EUMETSAT) and one of EUMETSATs Satellite Application 
     Facilities. The CM SAF contributes to the sustainable monitoring of the climate 
     system by providing essential climate variables related to the energy and water 
-    cycle of the atmosphere (<http://www.cmsaf.eu>). It is a joint cooperation of eight 
+    cycle of the atmosphere (<https://www.cmsaf.eu>). It is a joint cooperation of eight 
     National Meteorological and Hydrological Services.
     The 'cmsafvis' R-package provides a collection of R-operators for the analysis and
     visualization of CM SAF NetCDF data.
@@ -36,9 +36,10 @@ Repository: CRAN
 RoxygenNote: 7.1.2
 Encoding: UTF-8
 Language: en-US
-Suggests: rnaturalearth (>= 0.1), spelling (>= 2.1), testthat (>= 2.3)
-Packaged: 2021-11-02 08:49:48 UTC; stkothe
+Suggests: plotKML (>= 0.8), rnaturalearth (>= 0.1), spelling (>= 2.1),
+        testthat (>= 2.3)
+Packaged: 2021-12-02 13:30:20 UTC; stkothe
 Maintainer: Steffen Kothe <Steffen.Kothe@dwd.de>
 Author: Steffen Kothe [aut, cre],
   Danny Parsons [ctb]
-Date/Publication: 2021-11-02 09:30:02 UTC
+Date/Publication: 2021-12-02 13:50:05 UTC

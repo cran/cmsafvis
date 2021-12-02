@@ -1,5 +1,14 @@
 # Changelog for cmsafvis package
 
+## 1.1.9
+
+- plotKML package is back on CRAN und export of KML is possible again
+- fieldmean plot includes now all available years and not just years included
+  in the climatology period
+- new color scale 'larry' added
+- get_basename_vis added to helper functions to avoid clash with   
+  cmsafops::get_basename
+
 ## 1.1.8
 
 - Duplication of get_basename helper function in cmsafvis and cmsafops led to
