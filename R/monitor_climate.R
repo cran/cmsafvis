@@ -4,6 +4,8 @@
 #' the given variable within the given time range and area. The intended 
 #' application is for daily accumulated data, such as sunshine duration.
 #' Dependent on the output format a PNG or MP4 is created.
+#' 
+#' Circular stripe plots are inspired by Emanuele Bevacqua (see emanuele.bevacqua.eu)
 #'
 #' You can pass a YAML config file and/or specify the arguments directly.
 #' Argument prioritization is done in the following way:
@@ -53,6 +55,8 @@
 #' If attach is false, this will be ignored(character).
 #' @param analyze_method Two analyze methods: mean == FALSE; accumulate == TRUE (logical) (Warming Stripes Plots, Time Series Plots, Trend Plots)
 #' @param selected_number Timesteps of the same selected time range (Warming Stripes Plots, Time Series Plots, Trend Plots)
+#' @param stripe_color Color option for stripe plots (Warming Stripes Plots)
+#' @param circ_plot Circular stripe plots (logical)
 #' @param dwd_logo Whether to add the DWD logo (logical).
 #' @param verbose Whether to display progress messages (logical).
 #' @param nc Alternatively to \code{infile} you can specify the input as an
@@ -94,6 +98,8 @@ monitor_climate <- function(plot_type = "absolute_map",
                             infile_attach = "auto",
                             analyze_method = TRUE,
                             selected_number = 1,
+                            stripe_color = 1,
+                            circ_plot = FALSE,
                             dwd_logo = FALSE,
                             verbose = TRUE,
                             nc = NULL

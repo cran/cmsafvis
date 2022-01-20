@@ -1,5 +1,14 @@
 # Changelog for cmsafvis package
 
+## 1.1.10
+
+- new config parameter for quicklook: 'unit' - define variable unit
+  - e.g., Percent or '%'
+- new color scales 'albedo' and 'albedo2' added 
+- minor adaptations to quicklook
+- GeoTiff output changed from RGB to raster values
+- Circular Stripe plots (contribution by Emanuele Bevacqua; see emanuele.bevacqua.eu)
+
 ## 1.1.9
 
 - plotKML package is back on CRAN und export of KML is possible again
