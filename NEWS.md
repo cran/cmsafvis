@@ -1,5 +1,11 @@
 # Changelog for cmsafvis package
 
+## 1.1.12
+
+- Adapt y-limit for fieldmean
+- Add option for x and y label of 1d plots
+- Unused packages removed from Imports: rworldxtra, rgdal, maptools
+
 ## 1.1.11
 
 - Minor adaptations to fieldmean plots
@@ -17,7 +23,7 @@
 
 ## 1.1.9
 
-- plotKML package is back on CRAN und export of KML is possible again
+- plotKML package is back on CRAN and export of KML is possible again
 - fieldmean plot includes now all available years and not just years included
   in the climatology period
 - new color scale 'larry' added
