@@ -1,10 +1,48 @@
 # Changelog for cmsafvis package
 
+## 1.2.0
+
+- Update to remove retired packages `rgdal`, `maptool`, `sp`
+
+
+## 1.1.18
+
+- Several fixes in `quicklook` to match 1.1.15 plots
+
+## 1.1.17
+
+- New quicklook parameter: `remap` to remap data using lon / lat from aux_file esp. for plotting CLAAS level-2 data
+
+## 1.1.16
+
+- New quicklook parameter: `aux_file` for optional aux file
+- New quicklook parameter: `smooth_factor` to smooth figures
+- New quicklook parameter: `scale_factor` to multiply with data 
+
+## 1.1.15
+
+- New config-parameter in quicklook: `log_scale` for logarithmic colorscales
+
+## 1.1.14
+
+- Bug fix in quicklook: variable was not recognized correctly due to missing `toupper` command
+- New config-parameter in quicklook: `mirror_data` to mirror data at south or north pole 
+
+## 1.1.13
+
+- Minor adaptations to quicklook: new config parameters (var_name, bluemarble, sysdata);
+  bluemarble plots are now available if the path to corresponding sysdata-file is given
+  in config-file (file will be available via CM SAF R Toolbox Website)
+
 ## 1.1.12
 
 - Adapt y-limit for fieldmean
 - Add option for x and y label of 1d plots
+<<<<<<< HEAD
+- Packages removed from Imports: rgdal, rworldxtra, maptools
+=======
 - Unused packages removed from Imports: rworldxtra, rgdal, maptools
+>>>>>>> 764d1d4326aba1c020cc850f7ef7218913619a71
 
 ## 1.1.11
 

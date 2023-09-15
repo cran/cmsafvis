@@ -150,27 +150,27 @@ render_plot <- function(plot_rinstat,
       ras <-
         raster::rasterFromXYZ(
           grd_dta,
-          crs = sp::CRS("+proj=longlat +datum=WGS84"),
+          crs = sf::st_crs(4326),
           digits = 1
         )
 
       kml_toolbox <- raster::rasterToPolygons(ras)
 
-      check_package_dependency("plotKML", reason = "exporting KML files")
+      # check_package_dependency("plotKML", reason = "exporting KML files")
 
-      plotKML::plotKML(
-        kml_toolbox,
-        file = outfile,
-        kmz = FALSE,
-        open.kml = FALSE,
-        plot.labpt = FALSE,
-        overwrite = TRUE,
-        outline = 0
-      )
+      # plotKML::plotKML(
+      #   kml_toolbox,
+      #   file = outfile,
+      #   kmz = FALSE,
+      #   open.kml = FALSE,
+      #   plot.labpt = FALSE,
+      #   overwrite = TRUE,
+      #   outline = 0
+      # )
       
-      # cat("Sorry, but the plotKML R-package was removed from CRAN 
-      #         and KML output is not possible at the moment.
-      #         We are working on a solution for the next update.","\n")
+      cat("Due to issues with the plotKML R-package we decided to remove
+              KML output from the CM SAF R Toolbox.
+              We are working on a solution for the next update.","\n")
       
     } else if (fileExtension == ".tif") {
       dta <- as.vector(visualizeDataTimestep)
@@ -180,12 +180,12 @@ render_plot <- function(plot_rinstat,
       ras <-
         raster::rasterFromXYZ(
           grd_dta,
-          crs = sp::CRS("+proj=longlat +datum=WGS84"),
+          crs = sf::st_crs(4326),
           digits = 1
         )
       ras_col <- raster::RGB(ras, col = col)
 
-      check_package_dependency("rgdal", "exporting GeoTIFF files")
+      # check_package_dependency("rgdal", "exporting GeoTIFF files")
       raster::writeRaster(ras, filename = outfile, format = "GTiff")
       #raster::writeRaster(ras_col, filename = outfile, format = "GTiff")  # Requires package rgdal
     } else if (fileExtension == ".jpg") {

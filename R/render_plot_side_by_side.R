@@ -157,7 +157,7 @@ render_plot_side_by_side <- function(plot_rinstat,
           ras <-
             raster::rasterFromXYZ(
               grd_dta,
-              crs = sp::CRS("+proj=longlat +datum=WGS84"),
+              crs = sf::st_crs(4326),
               digits = 1
             )
           
@@ -165,19 +165,19 @@ render_plot_side_by_side <- function(plot_rinstat,
           
           check_package_dependency("plotKML", reason = "exporting KML files")
 
-          plotKML::plotKML(
-            kml_toolbox,
-            file = outfile,
-            kmz = FALSE,
-            open.kml = FALSE,
-            plot.labpt = FALSE,
-            overwrite = TRUE,
-            outline = 0
-          )
+          # plotKML::plotKML(
+          #   kml_toolbox,
+          #   file = outfile,
+          #   kmz = FALSE,
+          #   open.kml = FALSE,
+          #   plot.labpt = FALSE,
+          #   overwrite = TRUE,
+          #   outline = 0
+          # )
            
-          # cat("Sorry, but the plotKML R-package was removed from CRAN 
-          #     and KML output is not possible at the moment.
-          #     We are working on a solution for the next update.","\n")
+          cat("Due to issues with the plotKML R-package we decided to remove
+              KML output from the CM SAF R Toolbox.
+              We are working on a solution for the next update.","\n")
           
         } else if (fileExtension == ".tif") {
           dta <- as.vector(visualizeDataTimestep)
@@ -187,12 +187,12 @@ render_plot_side_by_side <- function(plot_rinstat,
           ras <-
             raster::rasterFromXYZ(
               grd_dta,
-              crs = sp::CRS("+proj=longlat +datum=WGS84"),
+              crs = sf::st_crs(4326),
               digits = 1
             )
           ras_col <- raster::RGB(ras, col = col)
           
-          check_package_dependency("rgdal", "exporting GeoTIFF files")
+          # check_package_dependency("rgdal", "exporting GeoTIFF files")
           raster::writeRaster(ras_col, filename = outfile, format = "GTiff")  # Requires package rgdal
         } else if (fileExtension == ".jpg") {
           grDevices::jpeg(outfile, width = iwidth, height = iheight)
@@ -442,16 +442,15 @@ render_plot_side_by_side <- function(plot_rinstat,
             result_y <- append(result_y, rep(lat[j], length(lon)))
           }
           
-          coor_sat <- cbind(x=result_x, y=result_y)
-          A <- sp::SpatialPoints(coor_sat)
+          A <- cbind(x=result_x, y=result_y)
           
           for (istation in seq_along(data_station)) {
-            B <- sp::SpatialPoints(cbind(x=c(lon_station[istation]), y=c(lat_station[istation])))
-            tree <- SearchTrees::createTree(sp::coordinates(A))
-            inds <- SearchTrees::knnLookup(tree, newdat=sp::coordinates(B), k=1)
+            B <- cbind(x=c(lon_station[istation]), y=c(lat_station[istation]))
+            tree <- SearchTrees::createTree(A)
+            inds <- SearchTrees::knnLookup(tree, newdat=B, k=1)
             
-            lon_coor <- coor_sat[inds,1]
-            lat_coor <- coor_sat[inds,2]
+            lon_coor <- A[inds,1]
+            lat_coor <- A[inds,2]
             
             data_sat[istation] <- data_nc[which(lon == lon_coor),which(lat == lat_coor), which(date.time == timestep_2d)]
           }
@@ -779,27 +778,27 @@ render_plot_side_by_side <- function(plot_rinstat,
           ras <-
             raster::rasterFromXYZ(
               grd_dta,
-              crs = sp::CRS("+proj=longlat +datum=WGS84"),
+              crs = sf::st_crs(4326),
               digits = 1
             )
           
           kml_toolbox <- raster::rasterToPolygons(ras)
           
-          check_package_dependency("plotKML", reason = "exporting KML files")
+          # check_package_dependency("plotKML", reason = "exporting KML files")
 
-          plotKML::plotKML(
-            kml_toolbox,
-            file = outfile,
-            kmz = FALSE,
-            open.kml = FALSE,
-            plot.labpt = FALSE,
-            overwrite = TRUE,
-            outline = 0
-          )
+          # plotKML::plotKML(
+          #   kml_toolbox,
+          #   file = outfile,
+          #   kmz = FALSE,
+          #   open.kml = FALSE,
+          #   plot.labpt = FALSE,
+          #   overwrite = TRUE,
+          #   outline = 0
+          # )
           
-          # cat("Sorry, but the plotKML R-package was removed from CRAN 
-          #     and KML output is not possible at the moment.
-          #     We are working on a solution for the next update.","\n")
+          cat("Due to issues with the plotKML R-package we decided to remove
+              KML output from the CM SAF R Toolbox.
+              We are working on a solution for the next update.","\n")
           
         } else if (fileExtension == ".tif") {
           dta <- as.vector(visualizeDataTimestep)
@@ -809,12 +808,12 @@ render_plot_side_by_side <- function(plot_rinstat,
           ras <-
             raster::rasterFromXYZ(
               grd_dta,
-              crs = sp::CRS("+proj=longlat +datum=WGS84"),
+              crs = sf::st_crs(4326),
               digits = 1
             )
           ras_col <- raster::RGB(ras, col = col)
           
-          check_package_dependency("rgdal", "exporting GeoTIFF files")
+          # check_package_dependency("rgdal", "exporting GeoTIFF files")
           raster::writeRaster(ras, filename = outfile, format = "GTiff")
           # raster::writeRaster(ras_col, filename = outfile, format = "GTiff")  # Requires package rgdal
         } else if (fileExtension == ".jpg") {

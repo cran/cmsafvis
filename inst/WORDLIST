@@ -1,10 +1,13 @@
+aba
 albedo
 Bevacqua
 bevacqua
+CLAAS
 cmsaf
 CMSAF
 colorscale
 config
+ef
 Emanuele
 emanuele
 eu
@@ -26,6 +29,8 @@ png
 SAF
 safira
 Seviri
+sysd
+rda
 rect
 Träger
 Trentmann
@@ -64,6 +69,7 @@ loc
 lon
 maptools
 maximium 
+maptools
 mtext
 ortho
 outfile
@@ -71,6 +77,7 @@ quicklook
 rescaling
 rgdal
 rworldxtra
+sysdata
 temporaly 
 tif
 timeseries 

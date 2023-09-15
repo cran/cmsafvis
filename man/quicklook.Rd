@@ -14,6 +14,7 @@ quicklook(
   logo = TRUE,
   copyright = TRUE,
   bluemarble = FALSE,
+  maxpixels = FALSE,
   verbose = TRUE
 )
 }
@@ -40,6 +41,8 @@ quicklook(
 Due to data size this option is not available for the cmsafvis package on CRAN. Please have a look at
 our website https://www.cmsaf.eu/R_toolbox}
 
+\item{maxpixels}{logical; use actual number of pixels or default (100000)}
+
 \item{verbose}{logical; if TRUE, progress messages are shown}
 }
 \value{
@@ -62,5 +65,13 @@ parameters can be defined:
 \item{legend: }{TRUE / FALSE}
 \item{colorscale: }{character (e.g., Viridis)}
 \item{unit: }{character (e.g., Percent / '\%')}
+\item{var_name: }{character (e.g., Percent / '\%')}
+\item{bluemarble: }{TRUE / FALSE}
+\item{mirror_data: }{TRUE / FALSE / NP / SP}
+\item{scale_factor: }{numeric (e.g., 1)}
+\item{smooth_factor: }{numeric (e.g., 1)}
+\item{aux_file: } {path to optional aux-file, including CLAAS level 2 lon/ lat data}
+\item{sysd: } {path to optional sysdata.rda file, which includes bluemarble data}
+\item{remap: } {remap data to regular grid. TRUE / FALSE}
 }
 }

@@ -13,6 +13,7 @@
 #'@param iwidth width of the resulting image in pixels, see [grDevices::jpeg()][grDevices::png()]
 #'@param logo logical; should the cmsaf logo be added to the plot?
 #'@param copyright logical; should the copyright text be added to the plot?
+#'@param maxpixels logical; use actual number of pixels or default (100000) 
 #'@param bluemarble logical; should the data be plotted onto a NASA bluemarble (only available for MSG/Seviri based data)?
 #'   Due to data size this option is not available for the cmsafvis package on CRAN. Please have a look at
 #'   our website https://www.cmsaf.eu/R_toolbox
@@ -31,6 +32,14 @@
 #'  \item{legend: }{TRUE / FALSE}
 #'  \item{colorscale: }{character (e.g., Viridis)}
 #'  \item{unit: }{character (e.g., Percent / '%')}
+#'  \item{var_name: }{character (e.g., Percent / '%')}
+#'  \item{bluemarble: }{TRUE / FALSE}
+#'  \item{mirror_data: }{TRUE / FALSE / NP / SP}
+#'  \item{scale_factor: }{numeric (e.g., 1)}
+#'  \item{smooth_factor: }{numeric (e.g., 1)}
+#'  \item{aux_file: } {path to optional aux-file, including CLAAS level 2 lon/ lat data}
+#'  \item{sysd: } {path to optional sysdata.rda file, which includes bluemarble data}  
+#'  \item{remap: } {remap data to regular grid. TRUE / FALSE} 
 #' }
 #'@export
 #'@importFrom assertthat assert_that is.count is.flag is.readable is.writeable
@@ -44,6 +53,7 @@ quicklook <- function(config,
                       logo = TRUE,
                       copyright = TRUE,
                       bluemarble = FALSE,
+                      maxpixels = FALSE,
                       verbose = TRUE) {
   # Make sure that any user settings are reset when the function exits
   # This is a requirement by CRAN
@@ -79,8 +89,44 @@ quicklook <- function(config,
   assert_that(is.flag(copyright))
   assert_that(is.flag(bluemarble))
   
-  # define some global variables, which are part of the bluemarble data
-  nc_crs <- blue_marble <- NULL
+  ### Define helper function: Code from R-package plotrix 3.8-2
+  ### Plotrix: a package in the red light district of R
+  ### Author: J. Lemon
+  getYmult <- function() {
+    if(grDevices::dev.cur() == 1) {
+      warning("No graphics device open.")
+      ymult <- 1
+    }
+    else {
+      # get the plot aspect ratio
+      xyasp <- graphics::par("pin")
+      # get the plot coordinate ratio
+      xycr <- diff(graphics::par("usr"))[c(1,3)]
+      ymult <- xyasp[1]/xyasp[2]*xycr[2]/xycr[1]
+    }
+    return(ymult)
+  }
+  
+  draw.circle <- function(x, y, radius, nv=100, border=NULL, col=NA,
+                          lty=1, density=NULL, angle=45, lwd = 1) {
+    
+    xylim <- graphics::par("usr")
+    plotdim <- graphics::par("pin")
+    ymult <- getYmult()
+    angle.inc <- 2*pi/nv
+    angles <- seq(0,2*pi-angle.inc, by = angle.inc)
+    if(length(col) < length(radius)) 
+      col <- rep(col, length.out = length(radius))
+    for(circle in 1:length(radius)) {
+      xv <- cos(angles)*radius[circle]+x
+      yv <- sin(angles)*radius[circle]*ymult+y
+      graphics::polygon(xv, yv, border = border, col = col[circle], lty = lty,
+                        density = density, angle = angle, lwd = lwd)
+    }
+    invisible(list(x = xv, y = yv))
+  }
+  ### End of code from plotrix R-package
+  
   
   ### Build colorpalettes ###
   
@@ -108,7 +154,8 @@ quicklook <- function(config,
   rownames(palettes)[85] <- "albedo2"
   
   cloud_mask1 <- c("black", "transparent", "gray60", "white")
-  cloud_mask2 <- c("black", "transparent", "gray60", "white", "pink")
+  # cloud_mask2 <- c("black", "transparent", "gray60", "white", "pink")
+  cloud_mask2 <- c("transparent", "transparent", "gray60", "white", "white")
   
   ### Read and format logo ###
   
@@ -207,6 +254,7 @@ quicklook <- function(config,
   
   varnames <- c()
   units <- c()
+  bluemarbles <- c()
   
   plot_lim <- c()
   col_from_config <- c()
@@ -215,16 +263,22 @@ quicklook <- function(config,
   slots <- c()
   invert <- c()
   set_unit <- c()
+  set_vname <- c()
+  marble <- c()
+  sysd <- c()
+  auxf <- c()
+  mirror <- c()
+  logsc <- c()
+  scalef <- c()
+  smoothf <- c()
+  tick_lab <- vector(mode = "list", length = 1)
+  remap_q <- FALSE
   
   # define plotting area in case of polar projection
   area <- ""
   if (grepl("North", file_info$area)) area <- "NP"
   if (grepl("South", file_info$area)) area <- "SP"
   if (grepl("Global", file_info$area)) area <- "GL"
-  
-  if (bluemarble && !file_info$grid == "Satellite projection MSG/Seviri") {
-    stop("Bluemarble plotting is only available for CLAAS data on MSG grid.")
-  }
   
   vars <- names(configParams[[file_info$product_type]][[file_info$id]])[names(configParams[[file_info$product_type]][[file_info$id]]) != "Dataset"]
   nvars <- length(vars)
@@ -240,21 +294,71 @@ quicklook <- function(config,
     plot_lim <- rbind(plot_lim, c(limits$min, limits$max))
     legends <- c(legends, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$legend)
     slots <- c(slots, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$slot)
-    set_unit <- c(set_unit, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$unit)
+    set_vname <- c(set_vname, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$var_name)
+    marble <- c(marble, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$bluemarble)
+    
+    isysd <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$sysdata
+    if (!is.null(isysd)) sysd <- isysd
+    
+    imap <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$remap
+    if (!is.null(imap)) remap_q <- imap
+    
+    iauxf <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$aux_file
+    if (!is.null(iauxf)) auxf <- iauxf
+    
     iinvert <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$invert_col
     if (is.null(iinvert)) {
       iinvert <- FALSE
     }
     invert <- append(invert, iinvert)
+    
+    imirror <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$mirror_data
+    if (is.null(imirror)) {
+      imirror <- FALSE
+    }
+    mirror <- append(mirror, imirror)
+    
+    scfa <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$scale_factor
+    if (is.null(scfa)) {
+      scfa <- 1.0
+    }
+    scalef <- append(scalef, scfa)
+    
+    tl <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$tick_lab
+    if (is.null(tl)) {
+      tl <- NA
+    }
+    tick_lab[[i]] <- tl
+    
+    smfa <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$smooth_factor
+    if (is.null(smfa)) {
+      smfa <- NA
+    }
+    smoothf <- append(smoothf, smfa)
+    
+    iunit <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$unit
+    if (is.null(iunit)) {
+      iunit <- NA
+    }
+    set_unit <- append(set_unit, iunit)
+
+    ilogsc <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$log_scale
+    if (is.null(ilogsc)) {
+      ilogsc <- FALSE
+    }
+    logsc <- append(logsc, ilogsc)
+    
     col_from_config <- c(col_from_config, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$colorscale)
     if (logo) logos <- c(logos, configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$logo)
   }
   
+  mirror <- toupper(mirror)
+  
   ### Read infiles ###
   
   nc    <- ncdf4::nc_open(ref_file)
-  vars2 <- names(nc$var)[toupper(names(nc$var)) %in% vars]
-  vars  <- vars2[order(match(toupper(vars),toupper(vars2)))]
+  vars2 <- names(nc$var)[toupper(names(nc$var)) %in% toupper(vars)]
+  vars  <- vars2[order(match(toupper(vars2),toupper(vars)))]
   nvars <- length(vars)
   
   # no plot variables found
@@ -263,11 +367,35 @@ quicklook <- function(config,
   for (k in seq_along(vars)) {
     varnames <- c(varnames, ncdf4::ncatt_get(nc, vars[k], "long_name")$value)
     units <- c(units, ncdf4::ncatt_get(nc, vars[k], "units")$value)
+    bluemarbles <- c(bluemarbles, bluemarble)
+
     if (!is.null(set_unit)){
       if (!is.na(set_unit[k])){
         units[k] <- set_unit[k]
       }
     }
+    
+    if (!is.null(set_vname)){
+      if (!is.na(set_vname[k])){
+        varnames[k] <- set_vname[k]
+      }
+    }
+    
+    if (!is.null(marble)){
+      if (!is.na(marble[k])){
+        bluemarbles[k] <- marble[k]
+      }
+    }
+    
+    # define some global variables, which are part of the bluemarble data
+    if (!is.null(sysd)) {
+      if (file.exists(sysd)) {
+        cat("Loading sysdata file...", "\n")
+        load(sysd)
+      } else {
+        cat("WARNING, sysdata file not found!", "\n")
+      }
+    } 
   }
   
   # check lon lat names (not elegant, but should work for now)
@@ -362,6 +490,12 @@ quicklook <- function(config,
       logo.scale_color <- lsc
     } 
   }
+  
+  if (exists("blue_marble")) {
+    nc_crs <- NULL  
+  } else {
+    nc_crs <- blue_marble <- NULL
+  }
 
   # factor for font size
   hcor <- (iheight / 750) - 1
@@ -372,7 +506,7 @@ quicklook <- function(config,
   fsf <- round((iwidth / 1021) + hcor, digits = 2)
   
   # Prepare polar projection
-  
+  ori <- c(0, 0, 0)
   if (area == "NP" | area == "SP") {
     if (area == "NP") {
       ori  <- c(89.9, 0, 0)             # orientation North Pole
@@ -382,16 +516,19 @@ quicklook <- function(config,
     }
     nx <- dim(lond)[1]
     ny <- dim(lond)[2]
+  }
+   
     landcol   <- "gray75"     # "navajowhite3"
     oceancol  <- "gray85"     # "cadetblue3"
     outcol    <- "gray20"
     bordercol <- "gray20"
   
     m <- maps::map("world", plot = FALSE)
-  }
   
   ### Plot ###
-  
+  oldw <- getOption("warn")
+  options(warn = -1)
+    
     # read data
     stacks <- c()
     for (k in seq_along(vars)) {
@@ -406,6 +543,26 @@ quicklook <- function(config,
       raster::extent(stacks[[l]]) <- c(lon_min, lon_max, lat_min, lat_max)
     }
     
+    if (!is.null(auxf)) {
+      if (file.exists(auxf)) {
+        nc <- ncdf4::nc_open(auxf)
+          clon <- ncdf4::ncvar_get(nc, "lon")
+          clat <- ncdf4::ncvar_get(nc, "lat")
+        ncdf4::nc_close(nc)
+        
+        gc()
+        
+        carray <- array(0, dim = dim(clon))
+        carray <- carray[!is.na(clon)]
+        clat <- clat[!is.na(clon)]
+        clon <- clon[!is.na(clon)]
+        
+      } else {
+          cat(paste("Couldn't find aux_file: ", auxf, sep=""), "\n")
+      }
+    }
+    
+  options(warn = oldw)
     
     # filename and timestamp for title
     filename <- unlist(strsplit(basename(plotfile[1]), "\\."))
@@ -459,6 +616,22 @@ quicklook <- function(config,
 
     for (j in seq_along(vars)) {
       
+      # Check bluemarble 
+      if (bluemarbles[j] && !file_info$grid == "Satellite projection MSG/Seviri") {
+        stop("Bluemarble plotting is only available for CLAAS data on MSG grid.")
+      }
+      
+      # Get raster dimensions and set maxpixels
+      figdim <- dim(stacks[[j]])
+      
+      maxp <- 100000
+      
+      if (maxpixels) {
+        maxp <- figdim[1] * figdim[2]
+      } else {
+        maxp <- 500000
+      }
+      
       # Set color palette
       if (col_from_config[[1]] == "clouds") {
         stacks[[j]][[1]][is.na(stacks[[j]][[1]])] <- 0
@@ -469,7 +642,29 @@ quicklook <- function(config,
         }
         plot_lim[j,] <- range(raster::values(stacks[[j]][[1]]),na.rm = TRUE)
       } else {
-        col <- getColors(col_from_config[[j]], palettes, 32, FALSE)
+        if (logsc[j]) {
+          get_breaks <- function(x) {
+            lo <- floor(log10(min(x, na.rm = TRUE)))
+            hi <- ceiling(log10(max(x, na.rm = TRUE)))
+            as.vector(10 ^ (lo:hi) %o% 1:9)
+          }
+          
+          if (plot_lim[j,1] == 0) {
+            plot_lim[j,1] <- 0.001
+          }
+          
+          ticks <- get_breaks(plot_lim[j,])
+          col = getColors(col_from_config[[j]], palettes, length(ticks) - 1L, FALSE)
+        } else {
+            if (!is.na(tick_lab[[j]][1])) {
+              col = getColors(col_from_config[[j]], palettes, length(tick_lab[[j]]), FALSE)
+            } else {
+                col <- getColors(col_from_config[[j]], palettes, 32, FALSE)
+                if (col_from_config[[j]] == "terrain.colors" && remap_q) {
+                  col <- col[1:30]
+                }
+            }
+        }
       }
       
       # invert colors if invert_col is TRUE
@@ -479,19 +674,127 @@ quicklook <- function(config,
         }
       }
       
+      # remap data if remap_q = TRUE
+      if (remap_q) {
+        if (!is.null(auxf)) {
+          if (file.exists(auxf)) {
+            rdata <- c()
+            if (verbose) {
+              cat("Remapping...", "\n")
+            }
+            rdata <- remap4quicklook(var = vars[j], infile = plotfile, auxfile = auxf)
+            rdata$data <- rdata$data * scalef[j]
+            if (file_info$grid == "Satellite projection MSG/Seviri" || file_info$grid == "Remapped") {
+              file_info$grid <- "Remapped"
+              
+              rep.row <- function(x, n) {
+                matrix(rep(x, each = n), nrow = n)
+              }
+              
+              lon_l2  <-
+                replicate(length(rdata$lat), rdata$lon)
+              lat_l2  <-
+                rep.row(rdata$lat, length(rdata$lon))
+              
+              datav <- as.vector(rdata$data)
+              
+              # set data limits to plot_lim
+              datav[datav < plot_lim[j,1]] <- plot_lim[j,1] 
+              datav[datav > plot_lim[j,2]] <- plot_lim[j,2]
+              
+              a <- mapproj::mapproject(
+                  x = lon_l2,
+                  y = lat_l2,
+                  projection = "orthographic",
+                  orientation = ori
+                )
+              
+              nx <- figdim[1]
+              ny <- figdim[2]
+              
+              if (sum(is.na(a$x)) > 0 | sum(is.na(a$y)) > 0) {
+                dummy <- NULL
+                dummy <- !is.na(a$x)
+                a$x   <- a$x[dummy]
+                a$y   <- a$y[dummy]
+                datav <- datav[dummy]
+                dummy <- NULL
+                dummy <- !is.na(a$y)
+                a$x   <- a$x[dummy]
+                a$y   <- a$y[dummy]
+                datav <- datav[dummy]
+              }
+              
+              # define grid factors
+              xr <-
+                abs(range(lon_l2, na.rm = TRUE)[1]) + abs(range(lon_l2, na.rm = TRUE)[2])
+              yr <-
+                abs(range(lat_l2, na.rm = TRUE)[1]) + abs(range(lat_l2, na.rm = TRUE)[2])
+              l1 <- 3.1  # max value for nx/xf
+              l2 <- 2.0  # max value for ny/yf
+              
+              x1 <- c(40, 360)
+              y1 <- c(1, l1)
+              c1 <- stats::lm(y1 ~ x1)$coeff[[1]]
+              c2 <- stats::lm(y1 ~ x1)$coeff[[2]]
+              
+              if (xr > 40 & xr <= 360) {
+                xf <- c2 * xr + c1
+                xf <- round(xf, digits = 1)
+              } else {
+                xf <- 1
+              }
+              
+              x1 <- c(40, 180)
+              y1 <- c(1, l2)
+              c1 <- stats::lm(y1 ~ x1)$coeff[[1]]
+              c2 <- stats::lm(y1 ~ x1)$coeff[[2]]
+              
+              if (yr > 40 & yr <= 180) {
+                yf <- c2 * yr + c1
+                yf <- round(yf, digits = 1)
+              } else {
+                yf <- 1
+              }
+            }
+          } else {
+            cat("No aux-file found! This file is a requirement for remapping.", "\n")
+          }
+        }
+      }
+
       # Polar Projection Plot
-      if (area == "NP" | area == "SP") {
+      if (area == "NP" || area == "SP") {
        
         rotate_cc <- function(x) {apply(t(x), 2, rev)}
         
         datav <- raster::as.matrix(stacks[[j]][[1]])
+        # Apply scale factor
+        datav <- datav * scalef[j]
         # for some reason the data are mirrored; this has to be corrected
         datav <- rotate_cc(datav)
         if (area == "NP") {
-          datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
+          if (!is.null(mirror)) {
+            if (mirror[j] == "NP" | mirror[j] == "TRUE") {
+              datav <- datav[,dim(datav)[2]:1]
+            } else {
+              datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
+            }
+          } else {
+            datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
+          }
         }
+        
         if (area == "SP") {
-          datav <- datav[,dim(datav)[2]:1]
+          if (!is.null(mirror)) {
+            if (mirror[j] == "SP" | mirror[j] == "TRUE") {
+              datav <- datav[,dim(datav)[2]:1]
+            } else {
+              datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
+            }
+          } else {
+            datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
+          }
         }
         datav <- as.vector(datav)
         
@@ -637,7 +940,12 @@ quicklook <- function(config,
       } else {
         
       # bluemarble plot
-       if (bluemarble) {
+       if (bluemarbles[j]) {
+         if (!is.null(sysd)) {
+           if (!file.exists(sysd)) {
+              cat("No valid bluemarble data found!", "\n")
+           } 
+         }
          if (!is.null(blue_marble)) {
           raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
           fields::quilt.plot(
@@ -647,7 +955,7 @@ quicklook <- function(config,
           blue_marble$data_values,
           xlim = c(-1, 1),
           ylim = c(-1, 1),
-          zlim = plot_lim[j,],
+          # zlim = plot_lim[j,],
           nx = blue_marble$n_lon_unique / blue_marble$xf,
           ny = blue_marble$n_lat_unique / blue_marble$yf,
           xlab = " ",
@@ -658,12 +966,13 @@ quicklook <- function(config,
           axes = FALSE
           )
         
-          raster::image(stacks[[j]], y = slot_i,
+          raster::image(stacks[[j]] * scalef[j], y = slot_i,
           main = "",
           axes = FALSE,
           xlab = "",
           ylab = "",
           col = col,
+          maxpixels = maxp,
           add = TRUE)
          } else {
            stop("Bluemarble plotting is not available. See https://www.cmsaf.eu/R_toolbox")
@@ -691,30 +1000,91 @@ quicklook <- function(config,
             axes = FALSE
             )
           } else {
-              stop("Bluemarble plotting is not available. See https://www.cmsaf.eu/R_toolbox")
+              if (!is.null(auxf)) {
+                if (file.exists(auxf)) {
+                  graphics::par(pty = "s")
+                  raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
+                  fields::quilt.plot(
+                    clon,
+                    clat,
+                    carray,
+                    xlim = c(-1, 1),
+                    ylim = c(-1, 1),
+                    xlab = " ",
+                    ylab = " ",
+                    col = "gray85",
+                    add.legend = FALSE,
+                    axes = FALSE
+                  )
+                }
+              } else {
+                  stop("Bluemarble plotting is not available. No valid bluemarble data found! See https://www.cmsaf.eu/R_toolbox")
+              }
             }
         } else {
-          graphics::image((lon_min*0.998):(lon_max*1.002),
-                          lat_min:lat_max,
-                          outer((lon_min*0.998):(lon_max*1.002),lat_min:lat_max,"+"),
-                          main = "",
-                          xlim = c(lon_min, lon_max),
-                          ylim = c(lat_min, lat_max),
-                          xlab = " ",
-                          ylab = " ",
-                          col = "gray85",
-                          axes = FALSE,
-                          asp = 1
-          )
+          if (file_info$grid == "Remapped") {
+            fields::quilt.plot(
+              a$x,
+              a$y,
+              datav,
+              xlim = c(-1, 1),
+              ylim = c(-1, 1),
+              zlim = plot_lim[j,],
+              nx = nx / xf,
+              ny = ny / yf,
+              xlab = " ",
+              ylab = " ",
+              main = " ",
+              col = col,
+              add.legend = FALSE,
+              axes = FALSE,
+              useRaster = TRUE,
+              asp = 1
+            )
+            
+            graphics::polygon(
+              sin(seq(0, 2 * pi, length.out = 100)),
+              cos(seq(0, 2 * pi, length.out = 100)),
+              col = oceancol,
+              border = grDevices::rgb(1, 1, 1, 0.5),
+              lwd = 1
+            )
+          } else {
+              graphics::image((lon_min*0.998):(lon_max*1.002),
+                            lat_min:lat_max,
+                            outer((lon_min*0.998):(lon_max*1.002),lat_min:lat_max,"+"),
+                            main = "",
+                            xlim = c(lon_min, lon_max),
+                            ylim = c(lat_min, lat_max),
+                            xlab = " ",
+                            ylab = " ",
+                            col = "gray85",
+                            axes = FALSE,
+                            useRaster = TRUE,
+                            asp = 1
+            ) 
+          }
         }
          
          # land plot
-         if (file_info$grid == "Satellite projection MSG/Seviri") {
-           raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
-           suppressWarnings(
-             maps::map("world", projection = "orthographic", fill = TRUE, border = NA, 
-                       col = "gray75", orientation = c(0,0,0), add = TRUE)
-           )
+         if (file_info$grid == "Satellite projection MSG/Seviri" || file_info$grid == "Remapped") {
+           if (!is.null(auxf)) {
+             raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
+             suppressWarnings(
+               maps::map("world", projection = "orthographic", fill = TRUE, border = NA,
+                         col = "gray75", orientation = ori, boundary = FALSE, 
+                         xlim = c(min(clon), max(clon)), 
+                         ylim = c(min(clat), max(clat)),
+                         lforce = "e",
+                         add = TRUE)
+             )
+           } else {
+               raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
+               suppressWarnings(
+               maps::map("world", projection = "orthographic", fill = TRUE, border = NA,
+                         col = "gray75", orientation = c(0,0,0), add = TRUE)
+               )
+           }
          } else if (area == "GL") {
            if (lon_max >= 359) {
              maps::map("world2", fill = TRUE, border = NA, xlim = c(lon_min, lon_max), 
@@ -738,7 +1108,7 @@ quicklook <- function(config,
         # but the solution on Windows did not work on Linux
         if (ind360) {
         #  raster::image(raster::rotate(stacks[[j]]),
-            raster::image(stacks[[j]], y = slot_i,
+            raster::image(stacks[[j]] * scalef[j], y = slot_i,
                         main = "",
                         xlim = c(lon_min, lon_max),
                         ylim = c(lat_min, lat_max),
@@ -749,31 +1119,209 @@ quicklook <- function(config,
                         col = col,
                         colNA = "gray85",
                         asp = 1,
+                        maxpixels = maxp,
                         add = TRUE
           )
         } else {
-            raster::image(stacks[[j]], y = slot_i,
-                          main = "",
-                          xlim = c(lon_min, lon_max),
-                          ylim = c(lat_min, lat_max),
-                          axes = FALSE,
-                          xlab = "",
-                          ylab = "",
-                          zlim = plot_lim[j,],
+            if (logsc[j] && !remap_q) {
+              # raster::values(stacks[[j]])[raster::values(stacks[[j]]) <= 0] <- plot_lim[j,1]
+              # 
+              # if (slot_i == 1) {
+              #   raster::image(raster::calc(stacks[[j]], fun=log) * scalef[j],
+              #                 main = "",
+              #                 xlim = c(lon_min, lon_max),
+              #                 ylim = c(lat_min, lat_max),
+              #                 axes = FALSE,
+              #                 xlab = "",
+              #                 ylab = "",
+              #                 #zlim = log(plot_lim[j,]),
+              #                 col = col,
+              #                 colNA = "gray85",
+              #                 asp = 1,
+              #                 maxpixels = maxp,
+              #                 add = TRUE
+              #   )  
+              # } else {
+              #   raster::image(raster::calc(stacks[[j]], fun=log) * scalef[j], y = slot_i,
+              #                 main = "",
+              #                 xlim = c(lon_min, lon_max),
+              #                 ylim = c(lat_min, lat_max),
+              #                 axes = FALSE,
+              #                 xlab = "",
+              #                 ylab = "",
+              #                 #zlim = log(plot_lim[j,]),
+              #                 col = col,
+              #                 colNA = "gray85",
+              #                 asp = 1,
+              #                 maxpixels = maxp,
+              #                 add = TRUE
+              #   )
+              # }
+              
+              nc    <- ncdf4::nc_open(ref_file)
+                lond <- ncdf4::ncvar_get(nc, lonvar)
+                latd <- ncdf4::ncvar_get(nc, latvar)
+              ncdf4::nc_close(nc)
+              
+              lonv  <- as.vector(lond)
+              latv  <- as.vector(latd)
+              lonv  <- seq(min(lonv), max(lonv), length.out = length(lonv))
+              latv  <- seq(min(latv), max(latv), length.out = length(latv))
+              rotate <- function(x) t(apply(x, 2, rev))
+              
+              datav <- raster::as.matrix(stacks[[j]][[slot_i]])
+              
+              # For log-scale values below or equal 0 are not allowed 
+              datav[datav <= 0] <- plot_lim[j,1]
+              
+              graphics::image(lonv, latv, log(rotate(datav)), 
+                              axis.args=list( at=log(ticks), labels=ticks), 
+                              main = "",
+                              xlim = c(lon_min, lon_max),
+                              ylim = c(lat_min, lat_max),
+                              zlim = log(plot_lim[j,]),
+                              axes = FALSE,
+                              xlab = "",
+                              ylab = "",
+                              col = col,
+                              colNA = "gray85",
+                              asp = 1,
+                              useRaster = TRUE,
+                              add = TRUE
+              )
+              
+            } else {
+                if (!is.na(smoothf[j])) {
+                  smp <- raster::disaggregate(stacks[[j]], fact = smoothf[j], method='bilinear')
+                  
+                  raster::image(smp,
+                                main = "",
+                                xlim = c(lon_min, lon_max),
+                                ylim = c(lat_min, lat_max),
+                                axes = FALSE,
+                                xlab = "",
+                                ylab = "",
+                                zlim = plot_lim[j,],
+                                col = col,
+                                colNA = "gray85",
+                                asp = 1,
+                                add = TRUE
+                  )
+                } else {
+                    if (remap_q && !is.null(auxf)) {
+                      if (logsc[j]) {
+                        # graphics::image(rdata$lon, rdata$lat, log(rdata$data),
+                        #                 main = "",
+                        #                 xlim = c(lon_min, lon_max),
+                        #                 ylim = c(lat_min, lat_max),
+                        #                 axes = FALSE,
+                        #                 xlab = "",
+                        #                 ylab = "",
+                        #                 zlim = log(plot_lim[j,]),
+                        #                 col = col,
+                        #                 colNA = "gray85",
+                        #                 asp = 1,
+                        #                 useRaster = TRUE,
+                        #                 add = TRUE
+                        # )
+                        
+                        fields::quilt.plot(
+                          a$x,
+                          a$y,
+                          log(datav),
+                          xlim = c(-1, 1),
+                          ylim = c(-1, 1),
+                          zlim = log(plot_lim[j,]),
+                          nx = nx / xf,
+                          ny = ny / yf,
+                          xlab = " ",
+                          ylab = " ",
+                          main = "text1",
                           col = col,
-                          colNA = "gray85",
-                          asp = 1,
-                          add = TRUE
-            )
+                          add.legend = FALSE,
+                          axes = FALSE,
+                          add = TRUE,
+                          useRaster = TRUE,
+                          asp = 1
+                        )
+                      } else {
+                          # graphics::image(rdata$lon, rdata$lat, rdata$data,
+                          #               main = "",
+                          #               xlim = c(lon_min, lon_max),
+                          #               ylim = c(lat_min, lat_max),
+                          #               axes = FALSE,
+                          #               xlab = "",
+                          #               ylab = "",
+                          #               zlim = plot_lim[j,],
+                          #               col = col,
+                          #               colNA = "gray85",
+                          #               asp = 1,
+                          #               useRaster = TRUE,
+                          #               add = TRUE
+                          # )
+                          fields::quilt.plot(
+                            a$x,
+                            a$y,
+                            datav,
+                            xlim = c(-1, 1),
+                            ylim = c(-1, 1),
+                            zlim = plot_lim[j,],
+                            nx = nx / xf,
+                            ny = ny / yf,
+                            xlab = " ",
+                            ylab = " ",
+                            main = "text1",
+                            col = col,
+                            add.legend = FALSE,
+                            axes = FALSE,
+                            add = TRUE,
+                            useRaster = TRUE,
+                            asp = 1
+                          )
+                      }
+                    } else {
+                        raster::image(stacks[[j]] * scalef[j], y = slot_i,
+                                    main = "",
+                                    xlim = c(lon_min, lon_max),
+                                    ylim = c(lat_min, lat_max),
+                                    axes = FALSE,
+                                    xlab = "",
+                                    ylab = "",
+                                    zlim = plot_lim[j,],
+                                    col = col,
+                                    colNA = "gray85",
+                                    asp = 1,
+                                    maxpixels = maxp,
+                                    add = TRUE
+                      )
+                    }
+                }
+                
+            }
         }
         
         # borderline plot
-        if (file_info$grid == "Satellite projection MSG/Seviri") {
-          raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
-          suppressWarnings(
-            maps::map("world", projection = "orthographic", interior = FALSE, 
-                      col = "gray20", orientation = c(0,0,0), add = TRUE)
-          )
+        if (file_info$grid == "Satellite projection MSG/Seviri" || file_info$grid == "Remapped") {
+          if (!is.null(auxf)) {
+            raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
+            suppressWarnings(
+              maps::map("world", projection = "orthographic", interior = FALSE, 
+                        col = "gray10", orientation = ori, lwd = 1.5,
+                        xlim = c(min(clon), max(clon)), 
+                        ylim = c(min(clat), max(clat)),
+                        lforce = "e",
+                        add = TRUE)
+            )
+            
+            draw.circle(0,0,0.992, border = "gray85", lwd = 5)
+            draw.circle(0,0,1, border = "gray35", lwd = 1)
+          } else {
+              raster::extent(stacks[[j]]) <- c(-1, 1, -1, 1)
+              suppressWarnings(
+              maps::map("world", projection = "orthographic", interior = FALSE, 
+                        col = "gray20", orientation = c(0,0,0), add = TRUE)
+              )
+          }
         } else if (area == "GL") {
             if (lon_max >= 359) {
               maps::map("world2", interior = FALSE, xlim = c(lon_min, lon_max), 
@@ -860,26 +1408,120 @@ quicklook <- function(config,
       # plot legend
 
       if (legends[j]) {
-        raster::plot(stacks[[j]], y = slot_i,
-                     main = "",
-                     axes = FALSE,
-                     xlab = "",
-                     ylab = "",
-                     zlim = plot_lim[j,],
-                     legend.only = TRUE,
-                     legend.shrink = 0.9,
-                     legend.width = 1.5,
-                     legend.mar = 5.1,
-                     legend.args=list(text = units[j], 
-                                      side = 2, 
-                                      font = 2, 
-                                      line = 0.2, 
-                                      cex = 1.25*fsf),
-                     axis.args=list(cex.axis = 1*fsf),
-                     col = col,
-                     add = TRUE)
+        if (logsc[j]) {
+          if (remap_q) {
+            if (slot_i == 1) {
+              raster::plot(raster::calc(stacks[[j]], fun=log) * scalef[j],
+                           main = "",
+                           axes = FALSE,
+                           xlab = "",
+                           ylab = "",
+                           zlim = log(plot_lim[j,]),
+                           legend.only = TRUE,
+                           legend.shrink = 0.9,
+                           legend.width = 1.5,
+                           legend.mar = 5.1,
+                           legend.args=list(text = units[j],
+                                            side = 2,
+                                            font = 2,
+                                            line = 0.2,
+                                            cex = 1.25*fsf),
+                           axis.args=list(cex.axis = 1*fsf,
+                                          at=log(ticks), labels=ticks),
+                           col = col,
+                           add = TRUE)
+            } else {
+              raster::plot(raster::calc(stacks[[j]], fun=log) * scalef[j], y = slot_i,
+                           main = "",
+                           axes = FALSE,
+                           xlab = "",
+                           ylab = "",
+                           zlim = log(plot_lim[j,]),
+                           legend.only = TRUE,
+                           legend.shrink = 0.9,
+                           legend.width = 1.5,
+                           legend.mar = 5.1,
+                           legend.args=list(text = units[j],
+                                            side = 2,
+                                            font = 2,
+                                            line = 0.2,
+                                            cex = 1.25*fsf),
+                           axis.args=list(cex.axis = 1*fsf,
+                                          at=log(ticks), labels=ticks),
+                           col = col,
+                           add = TRUE)
+            }
+          } else {
+              fields::image.plot(lonv, latv, log(rotate(datav)), 
+                               zlim = log(plot_lim[j,]),   
+                               main = "",
+                               axes = FALSE,
+                               xlab = "",
+                               ylab = "",
+                               legend.only = TRUE,
+                               legend.shrink = 0.9,
+                               legend.width = 1.5,
+                               legend.mar = 5.1,
+                               legend.args=list(text = units[j], 
+                                                side = 2, 
+                                                font = 2, 
+                                                line = 0.2, 
+                                                cex = 1.25*fsf),
+                               axis.args=list(cex.axis = 1*fsf,
+                                              at=log(ticks), labels=ticks),
+                               col = col,
+                               add = TRUE)
+          }
+        } else {
+           if (!is.na(tick_lab[[j]][1])) {
+            breaks <- seq(plot_lim[j,1], plot_lim[j,2], length.out=(length(col) + 1))
+            labstep <- (breaks[2] - breaks[1]) / 2
+            labat <- seq(breaks[1]+labstep, breaks[length(breaks)]-labstep, length.out = length(tick_lab[[j]]))
+            graphics::par(cex=1.0)
+            raster::plot(stacks[[j]] * scalef[j], y = slot_i,
+                       main = "",
+                       axes = FALSE,
+                       xlab = "",
+                       ylab = "",
+                       zlim = plot_lim[j,],
+                       breaks = breaks,
+                       legend.only = TRUE,
+                       legend.shrink = 0.9,
+                       legend.width = 1.5,
+                       legend.mar = 5.1,
+                       legend.args=list(text = units[j], 
+                                        side = 2, 
+                                        font = 2, 
+                                        line = 0.2, 
+                                        cex = 1.25*fsf),
+                       axis.args=list(cex.axis = 1*fsf,
+                                      at=labat, 
+                                      labels=tick_lab[[j]],
+                                      las = 3),
+                       col = col,
+                       add = TRUE)
+           } else {
+             raster::plot(stacks[[j]] * scalef[j], y = slot_i,
+                          main = "",
+                          axes = FALSE,
+                          xlab = "",
+                          ylab = "",
+                          zlim = plot_lim[j,],
+                          legend.only = TRUE,
+                          legend.shrink = 0.9,
+                          legend.width = 1.5,
+                          legend.mar = 5.1,
+                          legend.args=list(text = units[j], 
+                                           side = 2, 
+                                           font = 2, 
+                                           line = 0.2, 
+                                           cex = 1.25*fsf),
+                       axis.args=list(cex.axis = 1*fsf),
+                       col = col,
+                       add = TRUE)
+           }
+        }
       }
-      
       
       # figure title
       if (is_multiplot) {
@@ -915,4 +1557,5 @@ quicklook <- function(config,
   if (file.exists("Rplots.pdf")) {
     file.remove("Rplots.pdf")
   }
+  gc()
 }
