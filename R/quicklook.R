@@ -24,22 +24,22 @@
 #'An example config file can be found in the extdata folder of this package. The following
 #'parameters can be defined: 
 #'\itemize{
-#'  \item{logo: }{color / black}
-#'  \item{slot: }{numeric (e.g., 13)}
-#'  \item{invert_col: }{TRUE / FALSE}
-#'  \item{Dataset: }{character (e.g., ICDR Seviri Radiation)}
-#'  \item{limits: }{min: numeric; max: numeric}
-#'  \item{legend: }{TRUE / FALSE}
-#'  \item{colorscale: }{character (e.g., Viridis)}
-#'  \item{unit: }{character (e.g., Percent / '%')}
-#'  \item{var_name: }{character (e.g., Percent / '%')}
-#'  \item{bluemarble: }{TRUE / FALSE}
-#'  \item{mirror_data: }{TRUE / FALSE / NP / SP}
-#'  \item{scale_factor: }{numeric (e.g., 1)}
-#'  \item{smooth_factor: }{numeric (e.g., 1)}
-#'  \item{aux_file: } {path to optional aux-file, including CLAAS level 2 lon/ lat data}
-#'  \item{sysd: } {path to optional sysdata.rda file, which includes bluemarble data}  
-#'  \item{remap: } {remap data to regular grid. TRUE / FALSE} 
+#' \item logo: color / black
+#' \item slot: numeric (e.g., 13)
+#' \item invert_col: TRUE / FALSE
+#' \item Dataset: character (e.g., ICDR Seviri Radiation)
+#' \item limits: min: numeric; max: numeric
+#' \item legend: TRUE / FALSE
+#' \item colorscale: character (e.g., Viridis)
+#' \item unit: character (e.g., Percent / '%')
+#' \item var_name: character (e.g., Percent / '%')
+#' \item bluemarble: TRUE / FALSE
+#' \item mirror_data: TRUE / FALSE / NP / SP
+#' \item scale_factor: numeric (e.g., 1)
+#' \item smooth_factor: numeric (e.g., 1)
+#' \item aux_file: path to optional aux-file, including CLAAS level 2 lon/ lat data
+#' \item sysd: path to optional sysdata.rda file, which includes bluemarble data
+#' \item remap: remap data to regular grid. TRUE / FALSE
 #' }
 #'@export
 #'@importFrom assertthat assert_that is.count is.flag is.readable is.writeable
@@ -53,7 +53,7 @@ quicklook <- function(config,
                       logo = TRUE,
                       copyright = TRUE,
                       bluemarble = FALSE,
-                      maxpixels = FALSE,
+                      maxpixels = TRUE,
                       verbose = TRUE) {
   # Make sure that any user settings are reset when the function exits
   # This is a requirement by CRAN
@@ -154,7 +154,6 @@ quicklook <- function(config,
   rownames(palettes)[85] <- "albedo2"
   
   cloud_mask1 <- c("black", "transparent", "gray60", "white")
-  # cloud_mask2 <- c("black", "transparent", "gray60", "white", "pink")
   cloud_mask2 <- c("transparent", "transparent", "gray60", "white", "white")
   
   ### Read and format logo ###
@@ -280,7 +279,9 @@ quicklook <- function(config,
   if (grepl("South", file_info$area)) area <- "SP"
   if (grepl("Global", file_info$area)) area <- "GL"
   
-  vars <- names(configParams[[file_info$product_type]][[file_info$id]])[names(configParams[[file_info$product_type]][[file_info$id]]) != "Dataset"]
+  # vars <- names(configParams[[file_info$product_type]][[file_info$id]])[names(configParams[[file_info$product_type]][[file_info$id]]) != "Dataset"]
+  vars <- names(configParams[[file_info$product_type]][[file_info$id]])
+  vars <- vars[!(vars %in% c("remap", "aux_file", "Dataset"))]
   nvars <- length(vars)
   
   # no plot variables found
@@ -300,10 +301,10 @@ quicklook <- function(config,
     isysd <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$sysdata
     if (!is.null(isysd)) sysd <- isysd
     
-    imap <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$remap
+    imap <- configParams[[file_info$product_type]][[file_info$id]]$remap
     if (!is.null(imap)) remap_q <- imap
     
-    iauxf <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$aux_file
+    iauxf <- configParams[[file_info$product_type]][[file_info$id]]$aux_file
     if (!is.null(iauxf)) auxf <- iauxf
     
     iinvert <- configParams[[file_info$product_type]][[file_info$id]][[vars[i]]]$invert_col
@@ -649,11 +650,34 @@ quicklook <- function(config,
             as.vector(10 ^ (lo:hi) %o% 1:9)
           }
           
+          logzero <- FALSE
+          tick_lim <- plot_lim[j,]
+          
           if (plot_lim[j,1] == 0) {
-            plot_lim[j,1] <- 0.001
+            datav <- raster::as.matrix(stacks[[j]][[slot_i]])
+            minval <- min(datav[datav > 0], na.rm = TRUE)
+            tick_lim[1] <- minval
+            logzero <- TRUE
+            ticks <- get_breaks(tick_lim)
+            ticks_labs <- ticks 
+            zeroval <- 0.5 * minval
+            if (ticks[1] < minval) {
+              zeroval <- ticks[1]
+              ticks_labs[1] <- "0"
+            } else {
+                zeroval <- ticks[1] - (0.9 * ticks[1])
+                ticks <- append(zeroval, ticks)
+                ticks_labs <- append("0", ticks_labs)
+            }
+            
+            # adjust plot_lim
+            plot_lim[j,1] <- zeroval
+            
+          } else {
+              ticks <- get_breaks(plot_lim[j,])
+              ticks_labs <- ticks
           }
           
-          ticks <- get_breaks(plot_lim[j,])
           col = getColors(col_from_config[[j]], palettes, length(ticks) - 1L, FALSE)
         } else {
             if (!is.na(tick_lab[[j]][1])) {
@@ -697,11 +721,7 @@ quicklook <- function(config,
                 rep.row(rdata$lat, length(rdata$lon))
               
               datav <- as.vector(rdata$data)
-              
-              # set data limits to plot_lim
-              datav[datav < plot_lim[j,1]] <- plot_lim[j,1] 
-              datav[datav > plot_lim[j,2]] <- plot_lim[j,2]
-              
+
               a <- mapproj::mapproject(
                   x = lon_l2,
                   y = lat_l2,
@@ -765,37 +785,19 @@ quicklook <- function(config,
 
       # Polar Projection Plot
       if (area == "NP" || area == "SP") {
-       
-        rotate_cc <- function(x) {apply(t(x), 2, rev)}
-        
-        datav <- raster::as.matrix(stacks[[j]][[1]])
+
+        nc <- ncdf4::nc_open(plotfile)
+          datav <- ncdf4::ncvar_get(nc, vars[j])
+        ncdf4::nc_close(nc)
         # Apply scale factor
         datav <- datav * scalef[j]
-        # for some reason the data are mirrored; this has to be corrected
-        datav <- rotate_cc(datav)
-        if (area == "NP") {
-          if (!is.null(mirror)) {
-            if (mirror[j] == "NP" | mirror[j] == "TRUE") {
-              datav <- datav[,dim(datav)[2]:1]
-            } else {
-              datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
-            }
-          } else {
-            datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
-          }
-        }
+
+        if (!is.null(mirror)) {
+          if (mirror[j] == "NP" | mirror[j] == "SP" | mirror[j] == "TRUE") {
+            datav <- datav[dim(datav)[1]:1,]
+          } 
+        } 
         
-        if (area == "SP") {
-          if (!is.null(mirror)) {
-            if (mirror[j] == "SP" | mirror[j] == "TRUE") {
-              datav <- datav[,dim(datav)[2]:1]
-            } else {
-              datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
-            }
-          } else {
-            datav <- datav[dim(datav)[1]:1,dim(datav)[2]:1]
-          }
-        }
         datav <- as.vector(datav)
         
         lonv  <- as.vector(lond)
@@ -955,7 +957,6 @@ quicklook <- function(config,
           blue_marble$data_values,
           xlim = c(-1, 1),
           ylim = c(-1, 1),
-          # zlim = plot_lim[j,],
           nx = blue_marble$n_lon_unique / blue_marble$xf,
           ny = blue_marble$n_lat_unique / blue_marble$yf,
           xlab = " ",
@@ -1124,39 +1125,6 @@ quicklook <- function(config,
           )
         } else {
             if (logsc[j] && !remap_q) {
-              # raster::values(stacks[[j]])[raster::values(stacks[[j]]) <= 0] <- plot_lim[j,1]
-              # 
-              # if (slot_i == 1) {
-              #   raster::image(raster::calc(stacks[[j]], fun=log) * scalef[j],
-              #                 main = "",
-              #                 xlim = c(lon_min, lon_max),
-              #                 ylim = c(lat_min, lat_max),
-              #                 axes = FALSE,
-              #                 xlab = "",
-              #                 ylab = "",
-              #                 #zlim = log(plot_lim[j,]),
-              #                 col = col,
-              #                 colNA = "gray85",
-              #                 asp = 1,
-              #                 maxpixels = maxp,
-              #                 add = TRUE
-              #   )  
-              # } else {
-              #   raster::image(raster::calc(stacks[[j]], fun=log) * scalef[j], y = slot_i,
-              #                 main = "",
-              #                 xlim = c(lon_min, lon_max),
-              #                 ylim = c(lat_min, lat_max),
-              #                 axes = FALSE,
-              #                 xlab = "",
-              #                 ylab = "",
-              #                 #zlim = log(plot_lim[j,]),
-              #                 col = col,
-              #                 colNA = "gray85",
-              #                 asp = 1,
-              #                 maxpixels = maxp,
-              #                 add = TRUE
-              #   )
-              # }
               
               nc    <- ncdf4::nc_open(ref_file)
                 lond <- ncdf4::ncvar_get(nc, lonvar)
@@ -1172,7 +1140,9 @@ quicklook <- function(config,
               datav <- raster::as.matrix(stacks[[j]][[slot_i]])
               
               # For log-scale values below or equal 0 are not allowed 
-              datav[datav <= 0] <- plot_lim[j,1]
+              if (logzero) {
+                datav[datav <= 0] <- zeroval
+              }
               
               graphics::image(lonv, latv, log(rotate(datav)), 
                               axis.args=list( at=log(ticks), labels=ticks), 
@@ -1210,20 +1180,11 @@ quicklook <- function(config,
                 } else {
                     if (remap_q && !is.null(auxf)) {
                       if (logsc[j]) {
-                        # graphics::image(rdata$lon, rdata$lat, log(rdata$data),
-                        #                 main = "",
-                        #                 xlim = c(lon_min, lon_max),
-                        #                 ylim = c(lat_min, lat_max),
-                        #                 axes = FALSE,
-                        #                 xlab = "",
-                        #                 ylab = "",
-                        #                 zlim = log(plot_lim[j,]),
-                        #                 col = col,
-                        #                 colNA = "gray85",
-                        #                 asp = 1,
-                        #                 useRaster = TRUE,
-                        #                 add = TRUE
-                        # )
+                        
+                        # For log-scale values below or equal 0 are not allowed 
+                        if (logzero) {
+                          datav[datav <= 0] <- zeroval
+                        }
                         
                         fields::quilt.plot(
                           a$x,
@@ -1245,20 +1206,6 @@ quicklook <- function(config,
                           asp = 1
                         )
                       } else {
-                          # graphics::image(rdata$lon, rdata$lat, rdata$data,
-                          #               main = "",
-                          #               xlim = c(lon_min, lon_max),
-                          #               ylim = c(lat_min, lat_max),
-                          #               axes = FALSE,
-                          #               xlab = "",
-                          #               ylab = "",
-                          #               zlim = plot_lim[j,],
-                          #               col = col,
-                          #               colNA = "gray85",
-                          #               asp = 1,
-                          #               useRaster = TRUE,
-                          #               add = TRUE
-                          # )
                           fields::quilt.plot(
                             a$x,
                             a$y,
@@ -1409,55 +1356,29 @@ quicklook <- function(config,
 
       if (legends[j]) {
         if (logsc[j]) {
-          if (remap_q) {
-            if (slot_i == 1) {
-              raster::plot(raster::calc(stacks[[j]], fun=log) * scalef[j],
-                           main = "",
-                           axes = FALSE,
-                           xlab = "",
-                           ylab = "",
-                           zlim = log(plot_lim[j,]),
-                           legend.only = TRUE,
-                           legend.shrink = 0.9,
-                           legend.width = 1.5,
-                           legend.mar = 5.1,
-                           legend.args=list(text = units[j],
-                                            side = 2,
-                                            font = 2,
-                                            line = 0.2,
-                                            cex = 1.25*fsf),
-                           axis.args=list(cex.axis = 1*fsf,
-                                          at=log(ticks), labels=ticks),
-                           col = col,
-                           add = TRUE)
-            } else {
-              raster::plot(raster::calc(stacks[[j]], fun=log) * scalef[j], y = slot_i,
-                           main = "",
-                           axes = FALSE,
-                           xlab = "",
-                           ylab = "",
-                           zlim = log(plot_lim[j,]),
-                           legend.only = TRUE,
-                           legend.shrink = 0.9,
-                           legend.width = 1.5,
-                           legend.mar = 5.1,
-                           legend.args=list(text = units[j],
-                                            side = 2,
-                                            font = 2,
-                                            line = 0.2,
-                                            cex = 1.25*fsf),
-                           axis.args=list(cex.axis = 1*fsf,
-                                          at=log(ticks), labels=ticks),
-                           col = col,
-                           add = TRUE)
-            }
+          if (logzero) {
+            raster::plot(raster::calc(stacks[[j]], fun=log) * scalef[j], y = slot_i,
+                         main = "",
+                         axes = FALSE,
+                         xlab = "",
+                         ylab = "",
+                         zlim = log(plot_lim[j,]),
+                         legend.only = TRUE,
+                         legend.shrink = 0.9,
+                         legend.width = 1.5,
+                         legend.mar = 5.1,
+                         legend.args=list(text = units[j],
+                                          side = 2,
+                                          font = 2,
+                                          line = 0.2,
+                                          cex = 1.25*fsf),
+                         axis.args=list(cex.axis = 1*fsf,
+                                        at=log(ticks), labels=ticks_labs),
+                         col = col,
+                         add = TRUE)  
           } else {
-              fields::image.plot(lonv, latv, log(rotate(datav)), 
+              fields::image.plot(log(datav), 
                                zlim = log(plot_lim[j,]),   
-                               main = "",
-                               axes = FALSE,
-                               xlab = "",
-                               ylab = "",
                                legend.only = TRUE,
                                legend.shrink = 0.9,
                                legend.width = 1.5,
@@ -1468,7 +1389,7 @@ quicklook <- function(config,
                                                 line = 0.2, 
                                                 cex = 1.25*fsf),
                                axis.args=list(cex.axis = 1*fsf,
-                                              at=log(ticks), labels=ticks),
+                                              at=log(ticks), labels=ticks_labs),
                                col = col,
                                add = TRUE)
           }

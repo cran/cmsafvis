@@ -1,6 +1,6 @@
 Package: cmsafvis
 Title: Tools to Visualize CM SAF NetCDF Data
-Version: 1.2.0
+Version: 1.2.2
 Authors@R: 
     c(person(given = "Steffen",
            family = "Kothe",
@@ -24,7 +24,7 @@ Description: The Satellite Application Facility on Climate Monitoring (CM SAF)
     (<http://www.cmsaf.eu/R_toolbox>).
 License: GPL (>= 3)
 BugReports: https://github.com/cmsaf/cmsaf-r-tools/issues
-Depends: R (>= 3.6)
+Depends: R (>= 4.0)
 Imports: assertthat (>= 0.2.1), cmsafops (>= 1.2.1), colorspace (>=
         1.4), countrycode (>= 1.1), fields (>= 10.3), mapproj (>=
         1.2.7), maps (>= 3.3.0), methods (>= 3.6), ncdf4 (>= 1.17), png
@@ -38,8 +38,8 @@ Language: en-US
 Suggests: animation (>= 2.6), FNN (>= 1.1), rainfarmr (>= 0.1),
         rnaturalearth, SearchTrees, spelling (>= 2.2), testthat (>=
         2.3), yaml (>= 2.2)
-Packaged: 2023-09-15 11:43:21 UTC; stkothe
+Packaged: 2023-12-19 11:48:25 UTC; stkothe
 Maintainer: Steffen Kothe <Steffen.Kothe@dwd.de>
 Author: Steffen Kothe [aut, cre],
   Danny Parsons [ctb]
-Date/Publication: 2023-09-15 12:52:05 UTC
+Date/Publication: 2023-12-19 12:10:09 UTC

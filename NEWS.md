@@ -1,5 +1,14 @@
 # Changelog for cmsafvis package
 
+## 1.2.2
+
+- Update of `quicklook` due to changes of `remap` and `aux_files` position in config file
+- Bug fix for polar quicklooks
+
+## 1.2.1
+
+- Bug fixes in `quicklook` for level-2 log-scales
+
 ## 1.2.0
 
 - Update to remove retired packages `rgdal`, `maptool`, `sp`
