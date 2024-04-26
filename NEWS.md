@@ -1,5 +1,18 @@
 # Changelog for cmsafvis package
 
+## 1.2.6
+
+- Bug fix for `quicklooks` due to incorrect background plotting
+
+## 1.2.5
+
+- New attribute for quicklook config file: `logmin`
+- Bug fix for `quicklook` for incorrect plot of grey background in some cases
+
+## 1.2.4
+
+- Minor update of `quicklook` for colour scale with triangle
+
 ## 1.2.3
 
 - Bug fix for `quicklook` in case of empty products plus log-scale and min=0

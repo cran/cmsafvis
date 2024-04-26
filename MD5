@@ -1,6 +1,6 @@
-dd4a5b0d20caa9ecb16d51248702e37f *DESCRIPTION
+56a5dc36970cbf856cf36bc8a533e33a *DESCRIPTION
 88e556c5ecbc9334bb472452bd544247 *NAMESPACE
-703f2d4d76bfcffe0b8cad874dcb8344 *NEWS.md
+33281f7bc473932931782c9324a54886 *NEWS.md
 81bf96faf603d2dcd9694fffd28a530c *R/CapWords.R
 fbb81a7ecd84247458cda61124e1f538 *R/ColorspacePrivates.R
 0bb5d92e7fc99930a3c8db952d92e21c *R/absolute_map.R
@@ -26,7 +26,6 @@ b5989a0b0ceaf7c81aa3570fce9ed7cd *R/cmsaf.hist.R
 d6d21c9513f44e3b9c8631052cc74972 *R/cmsaf.scatter.R
 c8fb82651576f7777da79d50c1db0b95 *R/cmsaf.side.by.side.R
 c3e5fb35ebde3a39a7007b50368d0d16 *R/cmsaf.time.series.R
-df6cc46bc7fae1a55b713f3d5065b35a *R/cmsafvis-package.R
 734ceeef8f6acb217070ebf439d986eb *R/cmsafvis.R
 f2206e1db06386f6d81cb0c72f7d92a4 *R/compare_grid.R
 ad5fe572ae14c3cc5072ab95d08d11d1 *R/compare_spatial_range.R
@@ -62,7 +61,7 @@ a9784c3a665a2d79fdda5dc472d30994 *R/plot_fieldmean.R
 dec3f2f34d331d3966de25aed5c2e4ae *R/plot_time_series.R
 14d2aeafff46d3171a1cac28a4652e5d *R/plot_trend.R
 f56e16d83a95749ae6bdd1dc091851e1 *R/plot_warming_stripes.R
-759fe1f5bbb02925d0b39f22953c3773 *R/quicklook.R
+4f0a70dd78df2abdda87430d81bbbaef *R/quicklook.R
 1d4abfb9edeae24cd158ded01dff81a1 *R/ranking.R
 497fdbfaa2df2d2845d8398f805a0b45 *R/recalculateImageDimensions.R
 5230e8f9bcfe81e71e4ba04566d4f236 *R/release_questions.R
@@ -85,13 +84,13 @@ a1fef58e2e793e99011840fd0a5ce63c *R/sysdata.rda
 734a990f0d3a729a0d03212192a693c7 *R/time_series_plot.R
 4735dc9aa4fdd2e0827d49a4186ae0b9 *R/trend_plot.R
 649973cd29b1d3478da860cbd69e3aa0 *R/warming_stripes_plot.R
-1e9876a36fd0697d58437b7203d430b7 *inst/WORDLIST
+3fa85bfd8259cea06090746b223a8598 *inst/WORDLIST
 ecd5d32528f54448439f86274dc992be *inst/extdata/CMSAF_NoName_Black.png
 b5eb1cb2864b71f867b04a5f13702f25 *inst/extdata/CMSAF_NoName_Black_s.png
 29f8f5640863f3604bb8606bfed02085 *inst/extdata/CMSAF_NoName_Colour_crop.png
 2b2df091e77471b650351ae135a52758 *inst/extdata/CMSAF_logo.png
 df5f0cbed3f55ef503f8121418b38afa *inst/extdata/DWD_logo.png
-fae685a6a685c55ef359f99607784c6e *inst/extdata/quicklook_config.yml
+0d5e6ded06df4ca38144b72c0e538cd4 *inst/extdata/quicklook_config.yml
 9c2359b99195fbb01c622c433ac3f589 *man/absolute_map.Rd
 22e7c561cdcd06df0b234c1d6efe3ab0 *man/anomaly_map.Rd
 4ae2251c1b79dfde70747311df00b53d *man/climatology_map.Rd
@@ -101,13 +100,13 @@ cebf5743083da077110c9f08472d62e8 *man/cmsaf.hovmoller.Rd
 07ea9e18c4e6ccdb32959fe177dd0f1b *man/cmsaf.scatter.Rd
 7eb215440133f145f18554362bf0a2c9 *man/cmsaf.side.by.side.Rd
 653e55852ca46824b56de5a503a00694 *man/cmsaf.time.series.Rd
-6fdfe4660917c9fac8a3dd06ef8618ae *man/cmsafvis-package.Rd
+71d80510dd2c3ac0606a54d56b31a515 *man/cmsafvis-package.Rd
 78fa6e7f44331fd6ef0c491916f74c02 *man/fieldmean_and_anomaly_map.Rd
 724145698ee55356951fd53a9998c343 *man/fieldmean_plot.Rd
 bd378c77d5e79d41190349751f90f9d2 *man/get_basename_vis.Rd
 22e7df80c1fef34668e72af8fcf3c910 *man/helper_time_series_compare.Rd
 953e72ed374dd9bdcf8a583f7cf54b60 *man/monitor_climate.Rd
-c25e0bd4238ff886caf61afe915db3e2 *man/quicklook.Rd
+d5829ff0a1f9bf42caa2e0ddcb80e902 *man/quicklook.Rd
 231bfb8672be7ba3f51a9881dc9c7660 *man/recalculateImageDimensions.Rd
 f9a4209485ced7c54596395707829222 *man/render_hist_plot.Rd
 a136ce328f5fa52b260f0832f1cd77cf *man/render_instat_plot.Rd
