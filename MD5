@@ -1,6 +1,6 @@
-56a5dc36970cbf856cf36bc8a533e33a *DESCRIPTION
+f32278f24cdbffee35db9c746b052903 *DESCRIPTION
 88e556c5ecbc9334bb472452bd544247 *NAMESPACE
-33281f7bc473932931782c9324a54886 *NEWS.md
+f636468229ebab21b64f7bdabda5cbbb *NEWS.md
 81bf96faf603d2dcd9694fffd28a530c *R/CapWords.R
 fbb81a7ecd84247458cda61124e1f538 *R/ColorspacePrivates.R
 0bb5d92e7fc99930a3c8db952d92e21c *R/absolute_map.R
@@ -61,7 +61,7 @@ a9784c3a665a2d79fdda5dc472d30994 *R/plot_fieldmean.R
 dec3f2f34d331d3966de25aed5c2e4ae *R/plot_time_series.R
 14d2aeafff46d3171a1cac28a4652e5d *R/plot_trend.R
 f56e16d83a95749ae6bdd1dc091851e1 *R/plot_warming_stripes.R
-4f0a70dd78df2abdda87430d81bbbaef *R/quicklook.R
+94be12e1a734668fb52e0b1f9e6a9c7e *R/quicklook.R
 1d4abfb9edeae24cd158ded01dff81a1 *R/ranking.R
 497fdbfaa2df2d2845d8398f805a0b45 *R/recalculateImageDimensions.R
 5230e8f9bcfe81e71e4ba04566d4f236 *R/release_questions.R
@@ -84,13 +84,13 @@ a1fef58e2e793e99011840fd0a5ce63c *R/sysdata.rda
 734a990f0d3a729a0d03212192a693c7 *R/time_series_plot.R
 4735dc9aa4fdd2e0827d49a4186ae0b9 *R/trend_plot.R
 649973cd29b1d3478da860cbd69e3aa0 *R/warming_stripes_plot.R
-3fa85bfd8259cea06090746b223a8598 *inst/WORDLIST
+c0f2be1b8cd1f921498a96297514b08e *inst/WORDLIST
 ecd5d32528f54448439f86274dc992be *inst/extdata/CMSAF_NoName_Black.png
 b5eb1cb2864b71f867b04a5f13702f25 *inst/extdata/CMSAF_NoName_Black_s.png
 29f8f5640863f3604bb8606bfed02085 *inst/extdata/CMSAF_NoName_Colour_crop.png
 2b2df091e77471b650351ae135a52758 *inst/extdata/CMSAF_logo.png
 df5f0cbed3f55ef503f8121418b38afa *inst/extdata/DWD_logo.png
-0d5e6ded06df4ca38144b72c0e538cd4 *inst/extdata/quicklook_config.yml
+17c3afe3df8cfbdacfa49bf254427389 *inst/extdata/quicklook_config.yml
 9c2359b99195fbb01c622c433ac3f589 *man/absolute_map.Rd
 22e7c561cdcd06df0b234c1d6efe3ab0 *man/anomaly_map.Rd
 4ae2251c1b79dfde70747311df00b53d *man/climatology_map.Rd
