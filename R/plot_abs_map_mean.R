@@ -13,6 +13,10 @@ plot_abs_map_mean <- function(variable,
                          output_format,
                          min_value,
                          max_value,
+                         lon_min,
+                         lon_max,
+                         lat_min,
+                         lat_max,
 						             color_pal,
 						             relative,
                          nbreaks,
@@ -71,6 +75,27 @@ plot_abs_map_mean <- function(variable,
   date_format_string <- ifelse(language == "deu", "%d.%m.%Y", "%Y-%m-%d")
   date_format_string_short <- ifelse(language == "deu", "%d.%m.", "%m-%d")
 
+  # Functions to calculate aspect ratio (code parts from ggplot2)
+  map_aspect = function(x, y) {
+    x.center <- sum(range(x)) / 2
+    y.center <- sum(range(y)) / 2
+    x.dist <- dist_central_angle(x.center + c(-0.5, 0.5), rep(y.center, 2))
+    y.dist <- dist_central_angle(rep(x.center, 2), y.center + c(-0.5, 0.5))
+    y.dist / x.dist
+  }
+  
+  dist_central_angle <- function(lon, lat) {
+    # Convert to radians
+    lat <- lat * pi / 180
+    lon <- lon * pi / 180
+    
+    hav <- function(x) sin(x / 2) ^ 2
+    ahav <- function(x) 2 * asin(x)
+    
+    n <- length(lat)
+    ahav(sqrt(hav(diff(lat)) + cos(lat[-n]) * cos(lat[-1]) * hav(diff(lon))))
+  }
+  
   # input
   if (!is.null(nc)) opennc <- nc
   else opennc <- ncdf4::nc_open(infile)
@@ -82,6 +107,13 @@ plot_abs_map_mean <- function(variable,
 
   nx <- length(lon)
   ny <- length(lat)
+  
+  if (is.null(lon_min)) {
+    lon_min <- min(lon, na.rm =TRUE)
+    lat_min <- min(lat, na.rm =TRUE)
+    lon_max <- max(lon, na.rm =TRUE)
+    lat_max <- max(lat, na.rm =TRUE)
+  }
 
   if (is_leap_year(year) && finish_doy > 60 && start_doy < 60) {
     # We remove the leap year date in this case so we actually have one day less.
@@ -111,10 +143,6 @@ plot_abs_map_mean <- function(variable,
     field_for_setup <- field_source[, , 1:duration]
     field_for_setup_last <- field_source[, , duration]
   }
-
-
-  nx <- length(lon)
-  ny <- length(lat)
 
   # define colors
   bwr_col <-
@@ -266,9 +294,16 @@ plot_abs_map_mean <- function(variable,
 
   coldiff <- max_value - min_value
 
+  # Get aspect ratio
+  aspect_ratio <- map_aspect(c(lon_min, lon_max), c(lat_min, lat_max))
+  
   # pic size
-  pic.width <-  710
   pic.height <- 830
+  pic.width <-  round((((nx / ny) / aspect_ratio) * pic.height) * 1.09)
+  if (pic.width < 710) {
+    pic.width <- 830
+    pic.height <- round(pic.width * ((ny * aspect_ratio) / (nx * 1.09)))
+  }
 
   if (country_code == "TOT") {
     pic.width <-  830
@@ -381,7 +416,8 @@ plot_abs_map_mean <- function(variable,
     graphics::par(cex = 1.3,
                   mgp = c(2, 1, 0),
                   mar = c(2, 1, 3, 4) + 0.1)
-    fields::image.plot(
+    
+    fields::imagePlot(
       lon,
       lat,
       field.plot_freeze,
@@ -396,7 +432,10 @@ plot_abs_map_mean <- function(variable,
       nlevel = ncol - 1,
       axis.args = list(at = at.ticks, labels = names.ticks),
       legend.mar = lg_mar,
-      cex.main = 1.1
+      cex.main = 1.1,
+      xlim = c(lon_min, lon_max),
+      ylim = c(lat_min, lat_max),
+      asp = aspect_ratio
     )
 
     # State and/or country borders
@@ -464,7 +503,7 @@ plot_abs_map_mean <- function(variable,
         paste0(box_text, climate_year_start, "-", climate_year_end)
       ), cex = 1.3)
     }
-    unit_location <- 0.918
+    unit_location <- 0.928
 
     if (country_code == "EUR") {
       unit_location <- 0.958
@@ -539,7 +578,7 @@ plot_abs_map_mean <- function(variable,
             mar = c(2, 1, 3, 4) + 0.1
           )
 
-          fields::image.plot(
+          fields::imagePlot(
             lon,
             lat,
             field.plot_freeze,
@@ -554,7 +593,10 @@ plot_abs_map_mean <- function(variable,
             nlevel = ncol - 1,
             legend.mar = lg_mar,
             axis.args = list(at = at.ticks, labels = names.ticks),
-            cex.main = 1.1
+            cex.main = 1.1,
+            xlim = c(lon_min, lon_max),
+            ylim = c(lat_min, lat_max),
+            asp = aspect_ratio
           )
 
           # State and/or country borders
@@ -641,7 +683,7 @@ plot_abs_map_mean <- function(variable,
                              ),
                              cex = 1.3)
           }
-          unit_location <- 0.918
+          unit_location <- 0.928
 
           if (country_code == "EUR") {
             unit_location <- 0.958
@@ -696,7 +738,7 @@ plot_abs_map_mean <- function(variable,
               mar = c(2, 1, 3, 4) + 0.1
             )
 
-            fields::image.plot(
+            fields::imagePlot(
               lon,
               lat,
               field.plot_freeze,
@@ -711,7 +753,10 @@ plot_abs_map_mean <- function(variable,
               nlevel = ncol - 1,
               legend.mar = lg_mar,
               axis.args = list(at = at.ticks, labels = names.ticks),
-              cex.main = 1.1
+              cex.main = 1.1,
+              xlim = c(lon_min, lon_max),
+              ylim = c(lat_min, lat_max),
+              asp = aspect_ratio
             )
 
             # State and/or country borders
@@ -794,7 +839,7 @@ plot_abs_map_mean <- function(variable,
                                ),
                                cex = 1.3)
             }
-            unit_location <- 0.918
+            unit_location <- 0.928
 
             if (country_code == "EUR") {
               unit_location <- 0.958
