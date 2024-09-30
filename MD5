@@ -1,6 +1,6 @@
-6bbae741762625b30fb223d4fe21477a *DESCRIPTION
+b7288d3dab4834f1bb072fd568054bfc *DESCRIPTION
 88e556c5ecbc9334bb472452bd544247 *NAMESPACE
-559440e6735899e27950281fa51b8c84 *NEWS.md
+ff8eb51f7403428cc707f398c51aef6d *NEWS.md
 81bf96faf603d2dcd9694fffd28a530c *R/CapWords.R
 fbb81a7ecd84247458cda61124e1f538 *R/ColorspacePrivates.R
 0bb5d92e7fc99930a3c8db952d92e21c *R/absolute_map.R
@@ -38,7 +38,7 @@ ed3b5b3c750f37046b01c6d278ef9a8b *R/fieldmean_and_anomaly_map.R
 31bbb511b427923e4c5e0779d253a1fd *R/fieldmean_clima.R
 4aa66459698348b721105c424c53274a *R/fieldmean_current.R
 792a4a4b726b7a898ca1d541426ee8d5 *R/fieldmean_ensemble.R
-c8717863d8d1627b07afcbf5b17ded9b *R/fieldmean_plot.R
+760a784ef9c3ecbe80f89b419aee2f1a *R/fieldmean_plot.R
 3c43a27f860d6ac35dfd24310c367c74 *R/getColors.R
 d869bbd117d5167c6c16c69ed038bad9 *R/getMimeType.R
 49417f6a3ca897c5f70b204aa635fd26 *R/getUserOptions.R
@@ -53,10 +53,10 @@ d94f6a5d2df71458406a991ac0615a63 *R/is_country.R
 c472dc54721d78c75672e221934f012b *R/is_valid_countrycode.R
 a432fe81aa51b900664d6313ba6f2ef2 *R/monitor_climate.R
 0ab1e51a4a0e984b81955fa19f491619 *R/parse_arguments.R
-77a733894b7309d8326f8ea8024ce762 *R/plot_abs_map.R
-f9ab7bc23a545b5c2d71de9912281170 *R/plot_abs_map_mean.R
-a9784c3a665a2d79fdda5dc472d30994 *R/plot_fieldmean.R
-2606186fcd5be66a33c26f24e63b9a49 *R/plot_fieldmean_and_map.R
+12e3164d114c4e3089d335c2f1dcad84 *R/plot_abs_map.R
+2307f1690b479aaf9ee9ab784582935b *R/plot_abs_map_mean.R
+11075031a3b79ce5031b1a6df682e9ac *R/plot_fieldmean.R
+870038b2d3561b42746ac6a7c2a1cc99 *R/plot_fieldmean_and_map.R
 6870598e6ef12bd579307baded13450f *R/plot_labeling.R
 dec3f2f34d331d3966de25aed5c2e4ae *R/plot_time_series.R
 14d2aeafff46d3171a1cac28a4652e5d *R/plot_trend.R
@@ -84,7 +84,7 @@ a1fef58e2e793e99011840fd0a5ce63c *R/sysdata.rda
 734a990f0d3a729a0d03212192a693c7 *R/time_series_plot.R
 4735dc9aa4fdd2e0827d49a4186ae0b9 *R/trend_plot.R
 649973cd29b1d3478da860cbd69e3aa0 *R/warming_stripes_plot.R
-c0f2be1b8cd1f921498a96297514b08e *inst/WORDLIST
+87978012d663fa51cb64a6019636d513 *inst/WORDLIST
 ecd5d32528f54448439f86274dc992be *inst/extdata/CMSAF_NoName_Black.png
 b5eb1cb2864b71f867b04a5f13702f25 *inst/extdata/CMSAF_NoName_Black_s.png
 29f8f5640863f3604bb8606bfed02085 *inst/extdata/CMSAF_NoName_Colour_crop.png
@@ -124,6 +124,5 @@ a044b0171f48d12e3b46784a0e88240c *man/time_series_plot.Rd
 22cb63d195db55eca4c708b5f1fd7319 *man/trend_plot.Rd
 de2b6f4f02193815fea4199a7010eac0 *man/warming_stripes_plot.Rd
 2926098c9266960cfaf9613ac0af809e *tests/spelling.R
-4c29f439cc904464dee7cc208d351c95 *tests/spelling.Rout.save
 42822e810fa72eae984908cd3434752b *tests/testthat.R
 c1f1b72cc47db897a36f67afe4770da1 *tests/testthat/test-set_time_locale.R

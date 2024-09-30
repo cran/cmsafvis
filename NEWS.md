@@ -1,5 +1,11 @@
 # Changelog for cmsafvis package
 
+## 1.2.9
+
+- For fieldmean plots unit is taken from metadata if it contains 
+  the addition (neu) or (new)
+- Minor fix of test
+
 ## 1.2.8
 
 - Bug fix for `quicklooks` for time format of hourly data
