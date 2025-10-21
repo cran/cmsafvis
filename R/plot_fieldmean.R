@@ -154,25 +154,48 @@ plot_fieldmean <- function(variable,
   }
 
   # Preparing data
-  if (start_doy > 1 || !climatology_until_eoy) {
-    plot_stop <- finish_doy
+  duration <- finish_doy - start_doy + 1
+  climate_duration <- duration
+  
+  len_curr <- length(var_current)
+  len_clim <- length(var_clima)
+  
+  # --- Slice current safely ---
+  if (len_curr == duration) {
+    # current is already windowed (e.g., 02-Mar .. 03-Oct), do not slice again
+    var_current_to_plot <- as.numeric(var_current)
   } else {
-    plot_stop <- 365
+    # slice by DOY but clamp to available range
+    s_idx <- max(1, start_doy)
+    e_idx <- min(finish_doy, len_curr)
+    var_current_to_plot <- as.numeric(var_current[s_idx:e_idx])
   }
-
-  duration <- length(var_current)
-  climate_duration <- plot_stop - start_doy + 1
-
-  var_current_to_plot <- var_current
-  var_climate_to_plot <- var_clima[start_doy:plot_stop]
-
+  
+  # --- Slice climatology safely (usually full year) ---
+  s_idx_clim <- max(1, start_doy)
+  e_idx_clim <- min(finish_doy, len_clim)
+  var_climate_to_plot <- as.numeric(var_clima[s_idx_clim:e_idx_clim])
+  
+  # --- De-accumulate relative to the in-window start (if requested) ---
   if (start_doy > 1 && adjustAccumulation) {
-    # If data was accumulated and we don't plot starting from January 1st, the data doesn't start at 0.
-    # We correct this by subtracting the value of the first date from alle dates.
-    var_current_to_plot <- var_current_to_plot - rep(var_current[1], duration)
-    var_climate_to_plot <- var_climate_to_plot - rep(var_climate_to_plot[1], climate_duration)
+    # Use first in-window values as offsets; robust against NA at Jan 1
+    off_curr <- var_current_to_plot[1]
+    if (is.na(off_curr)) off_curr <- 0
+    var_current_to_plot <- var_current_to_plot - off_curr
+    
+    off_clim <- var_climate_to_plot[1]
+    if (is.na(off_clim)) off_clim <- 0
+    var_climate_to_plot <- var_climate_to_plot - off_clim
   }
-
+  
+  # Keep a consistent plot length downstream
+  plot_length <- min(length(var_current_to_plot), length(var_climate_to_plot))
+  
+  #### DEBUGGING
+  message(sprintf("[DBG] curr_len=%d clim_len=%d duration=%d tail(curr)=%s",
+                  length(var_current_to_plot), length(var_climate_to_plot), duration,
+                  as.character(utils::tail(var_current_to_plot,1))))
+  
   ############################################################################################
   # plot var_2018_graphic
 
@@ -222,9 +245,7 @@ plot_fieldmean <- function(variable,
       pointsize = 12
     )
 
-    #######################graphics::par(cex = 1.2,oma = c(0,0,0,0),mar = c(2,5,3,2))
-    #graphics::par(cex = 1.2,oma = c(0,0,0,0),mar = c(2,5,3,1))
-    plot_length <- length(start_doy:plot_stop)
+    # plot_length <- finish_doy - start_doy + 1
 
     graphics::par(
       cex = 1.2,
@@ -236,7 +257,7 @@ plot_fieldmean <- function(variable,
     set_time_locale(language)
     tryCatch(
       graphics::plot(
-        dates[start_doy:plot_stop],
+        dates[start_doy:finish_doy],
         var_climate_to_plot,
         type = "l",
         lwd = lwd1,
@@ -267,7 +288,7 @@ plot_fieldmean <- function(variable,
       set_time_locale(language)
       tryCatch(
         graphics::lines(
-          dates[start_doy:plot_stop],
+          dates[start_doy:finish_doy],
           dat,
           col = "grey",
           lwd = lwd2
@@ -293,7 +314,7 @@ plot_fieldmean <- function(variable,
 
     tryCatch({
       graphics::lines(
-        dates[start_doy:plot_stop],
+        dates[start_doy:finish_doy],
         var_climate_to_plot,
         col = "black",
         lwd = lwd1
@@ -420,7 +441,7 @@ plot_fieldmean <- function(variable,
           }
 
           limit_y <- signif(ceiling(limit + limit/15), digits = 2)
-          plot_length <- plot_stop - start_doy + 1
+          # plot_length <- finish_doy - start_doy + 1
 
           corr_date <- start_doy + i - 1
 
@@ -434,7 +455,7 @@ plot_fieldmean <- function(variable,
           set_time_locale(language)
           tryCatch(
             graphics::plot(
-              dates[start_doy:plot_stop],
+              dates[start_doy:finish_doy],
               var_climate_to_plot,
               type = "l",
               lwd = lwd1,
@@ -466,7 +487,7 @@ plot_fieldmean <- function(variable,
             set_time_locale(language)
             tryCatch(
               graphics::lines(
-                dates[start_doy:plot_stop],
+                dates[start_doy:finish_doy],
                 dat,
                 col = "grey",
                 lwd = lwd2
@@ -493,7 +514,7 @@ plot_fieldmean <- function(variable,
           set_time_locale(language)
           tryCatch({
             graphics::lines(
-              dates[start_doy:plot_stop],
+              dates[start_doy:finish_doy],
               var_climate_to_plot,
               col = "black",
               lwd = lwd1
@@ -600,7 +621,7 @@ plot_fieldmean <- function(variable,
             set_time_locale(language)
             tryCatch(
               graphics::plot(
-                dates[start_doy:plot_stop],
+                dates[start_doy:finish_doy],
                 var_climate_to_plot,
                 type = "l",
                 lwd = lwd1,
@@ -623,7 +644,7 @@ plot_fieldmean <- function(variable,
               set_time_locale(language)
               tryCatch(
                 graphics::lines(
-                  dates[start_doy:plot_stop],
+                  dates[start_doy:finish_doy],
                   dat,
                   col = "grey",
                   lwd = lwd2
@@ -635,7 +656,7 @@ plot_fieldmean <- function(variable,
             set_time_locale(language)
             tryCatch({
               graphics::lines(
-                dates[start_doy:plot_stop],
+                dates[start_doy:finish_doy],
                 var_climate_to_plot,
                 col = "black",
                 lwd = lwd1
@@ -718,9 +739,36 @@ plot_fieldmean <- function(variable,
 
     final_values <- data.frame(title = titles, years = standout_years, value = standout_values)
     
-	ranking.values <- ranking(out_dir, variable, country_code, firstyear, lastyear, finish_doy)
+    # --- Build consistent ranking values based on plotted data ---
+    
+    # Vector of years corresponding to climatology files
+    years_all <- as.integer(firstyear):as.integer(lastyear)
+    
+    # Derive one representative value per year
+    # If accumulation is active: take the final day value (sum)
+    # Otherwise: use the mean over the selected period
+    values_all <- vapply(
+      years_all,
+      function(yy) {
+        dat <- get(paste0(variable, "_acc_", yy))  # already cropped & adjusted in plot loop
+        if (adjustAccumulation) {
+          utils::tail(dat, 1)  # final accumulated value
+        } else {
+          mean(dat, na.rm = TRUE)  # or sum(dat, na.rm = TRUE) if desired
+        }
+      },
+      numeric(1)
+    )
+    
+    # Create ranking dataframe directly from these values
+    ranking.values <- ranking(
+      out_dir, variable, country_code, firstyear, lastyear, finish_doy,
+      years = years_all, values = values_all
+    )
+    
+    # Pass to existing output routine
     calc.parameters.monitor.climate(final_values, ranking.values)
-  
+    
     # Print message
     if (adjustAccumulation) {
       message("Significant values at the final time period:")

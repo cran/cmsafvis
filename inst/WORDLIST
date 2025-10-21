@@ -1,13 +1,17 @@
 Bevacqua
 CLAAS
+colorbar
 CONFIG
 Changelog
+CRS
 DWD
+EPSG
 EUMETSAT
 EUMETSATs
 Emanuele
 Fieldmean
 GeoTiff
+Hovmöller
 Hydrological
 ICDR
 Instat
@@ -81,6 +85,7 @@ rworldxtra
 sysd
 sysdata
 temporaly
+textsize
 tif
 timeseries
 timestemp

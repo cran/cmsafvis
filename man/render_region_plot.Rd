@@ -2,7 +2,7 @@
 % Please edit documentation in R/render_region_plot.R
 \name{render_region_plot}
 \alias{render_region_plot}
-\title{Function to create a plot of a selected country.}
+\title{Render a regional raster plot with optional custom boundaries}
 \usage{
 render_region_plot(
   infile,
@@ -40,72 +40,62 @@ render_region_plot(
 )
 }
 \arguments{
-\item{infile}{The nc file to be visualized.}
+\item{infile}{Character path to the NetCDF input file.}
 
-\item{outfile}{Name of the outfile (NULL or character). Should match the fileExtension.
-If NULL is passed a file is created in the R session temporary directory.}
+\item{outfile}{Optional path for the output image file. If \code{NULL}, a temp file is used.}
 
-\item{fileExtension}{The file extension of the image (character). Has to be one of the following: 'png', 'jpg', 'tif', 'kml', 'pdf'.}
+\item{fileExtension}{Output file extension, one of \code{".png"}, \code{".jpg"}, \code{".pdf"}.}
 
-\item{visualizeVariables}{A data frame containing all meta data for the plotting process (data.frame).}
+\item{visualizeVariables}{List with at least \code{$vn} (variable name) and \code{$date.time}.}
 
-\item{visualizeDataMax}{Maximal data for computing breaks.}
+\item{visualizeDataMax}{Numeric; used for colorbar tick calculation.}
 
-\item{lon_bounds}{Array containing two values for longitude min and max (numeric).}
+\item{lon_bounds, lat_bounds}{Numeric vectors of visible longitude/latitude bounds (unused here but part of API).}
 
-\item{lat_bounds}{Array containing two values for latitude min and max (numeric).}
+\item{lon_loc_vec, lat_loc_vec, name_loc_vec}{Optional location markers (lon/lat + labels).}
 
-\item{lon_loc_vec}{All longitude entries for points at (lat_loc_vec, lon_loc_vec) to be specified on the map (numeric).}
+\item{division}{Character name of the attribute/level used to select the region (e.g. \code{"COUNTRY"} or a shapefile field).}
 
-\item{lat_loc_vec}{All latitude entries for points at (lat_loc_vec, lon_loc_vec) to be specified on the map (numeric).}
+\item{selectedRegion}{Character code/value of the selected region (e.g. ISO3).}
 
-\item{name_loc_vec}{Names for the points at (lat_loc_vec, lon_loc_vec) to be specified on the map (numeric).}
+\item{region_data}{Spatial or sf object with user-provided regions (when \code{division != "COUNTRY"}).}
 
-\item{division}{Division to contain region (either 'COUNTRY' or something coherent to region_data).}
+\item{timestep}{Selected timestep (should match an entry of \code{visualizeVariables$date.time}).}
 
-\item{selectedRegion}{The region to be cropped according to division. If \code{division == "COUNTRY"}, the country's \href{https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3}{3-character ISO code} should be used. Otherwise it has to fit to the passed region data.}
+\item{num_tick, num_rmin, num_rmax}{Numeric settings for legend ticks and z range.}
 
-\item{region_data}{If Division is not 'COUNTRY' then region_data has to contain spatial data of the given division.}
+\item{location}{Logical; draw location markers if \code{TRUE}.}
 
-\item{timestep}{Timestep to visualize at (character).}
+\item{text1, text2, text3}{Character strings for title, footer, and legend label.}
 
-\item{num_tick}{Number of ticks (numeric).}
+\item{PAL, palettes, num_brk, reverse}{Color palette settings passed to \code{getColors()}.}
 
-\item{num_rmin}{Color scale range minimum (numeric).}
+\item{textsize}{Numeric base text size used in plotting.}
 
-\item{num_rmax}{Color scale range maximium (numeric).}
+\item{bordercolor}{Color for region borders and markers.}
 
-\item{location}{Whether points specified by (lat_loc_vec, lon_loc_vec, name_loc_vec) should be added to the map (logical).}
+\item{plot_grid, grid_col}{Currently unused plotting options (kept for API compatibility).}
 
-\item{text1}{Title text (character).}
+\item{image_def, ihsf}{Image sizing settings from the Toolbox.}
 
-\item{text2}{Text to be passed to graphics::mtext (character).}
-
-\item{text3}{Text to be added to the legend (character).}
-
-\item{PAL}{Color palette.}
-
-\item{palettes}{Color palettes to be used.}
-
-\item{num_brk}{Number of breaks (numeric).}
-
-\item{reverse}{Whether to revert the color palette (logical).}
-
-\item{textsize}{Textsize to be used (cex).}
-
-\item{bordercolor}{Color used for borders.}
-
-\item{plot_grid}{Whether to plot a grid using color grid_col (logical).}
-
-\item{grid_col}{Color used for the grid.}
-
-\item{image_def}{Default size (positive numeric).}
-
-\item{ihsf}{Image height scaling factor (positive numeric).}
-
-\item{nc}{Alternatively to \code{infile} you can specify the input as an
-object of class \code{ncdf4} (as returned from \code{ncdf4::nc_open}).}
+\item{nc}{Optional opened NetCDF handle; if provided, \code{infile <- nc$filename}.}
+}
+\value{
+A named list with \code{src} (file path), \code{contentType}, \code{width}, \code{height}.
 }
 \description{
-This function generates a plot of within a certain region (e.g. a country).
+Produces a map image for a selected region by cropping/masking a NetCDF raster,
+handling longitude wrap (0–360 -> -180–180), CRS alignment, and setting sane
+plot limits/aspect. Designed for use in the CM SAF R Toolbox.
+}
+\details{
+The function:
+\enumerate{
+\item Loads the raster brick for the requested variable.
+\item Normalizes longitudes to -180 to 180 if input is 0–360 (via \code{raster::rotate}).
+\item Validates/aligns the region geometry (sf -> Spatial, EPSG:4326, transform to raster CRS).
+\item Crops/masks the raster by the region and draws the image with geographic aspect.
+}
+The package \pkg{lwgeom} is used \emph{optionally} (via \code{requireNamespace}) to fix invalid geometries;
+a \code{st_buffer(., 0)} fallback is applied if \pkg{lwgeom} is not available.
 }
